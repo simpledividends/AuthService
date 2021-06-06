@@ -50,7 +50,7 @@ mypy: .venv
 	mypy $(PROJECT) $(TESTS)
 
 bandit: .venv
-	bandit -r $(PROJECT) $(TESTS) $(MIGRATIONS)
+	bandit -r $(PROJECT) $(TESTS) $(MIGRATIONS) --skip B101 --silent
 
 flake: .venv
 	flake8 $(PROJECT) $(TESTS) $(MIGRATIONS)
