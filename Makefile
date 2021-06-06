@@ -34,11 +34,10 @@ install: .venv
 .pytest:
 	pytest
 
-test: .venv
-	.pytest
+test: .venv .pytest
 
 cov: .coverage
-	coverage run --source $(SERVICE) --module pytest
+	coverage run --source $(PROJECT) --module pytest
 	coverage report
 	coverage html -d $(COVERAGE)/html
 	coverage xml -o $(COVERAGE)/cobertura.xml
