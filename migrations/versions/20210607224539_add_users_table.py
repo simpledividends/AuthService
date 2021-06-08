@@ -27,6 +27,7 @@ def upgrade():
     op.create_table(
         "users",
         sa.Column("user_id", UUID, nullable=False),
+        sa.Column("name", VARCHAR(50), nullable=False),
         sa.Column("email", VARCHAR(128), nullable=False),
         sa.Column("password", VARCHAR(72), nullable=False),
         sa.Column("created_at", TIMESTAMP, nullable=False),
