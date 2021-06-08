@@ -5,18 +5,21 @@ from starlette.responses import JSONResponse
 
 from auth_service.response import create_response
 
+router = APIRouter()
 
+
+@router.get(
+    path="/ping",
+)
 async def ping(_: Request) -> JSONResponse:
     return create_response(message="pong", status_code=HTTPStatus.OK)
 
 
+@router.post(
+    path="/auth/register"
+)
+async def register() -> User:
+
+
 def add_routes(app: FastAPI) -> None:
-    router = APIRouter()
-
-    router.add_route(
-        path="/ping",
-        endpoint=ping,
-        methods=["GET"],
-    )
-
     app.include_router(router)
