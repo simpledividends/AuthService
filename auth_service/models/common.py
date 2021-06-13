@@ -1,18 +1,6 @@
 import typing as tp
-from enum import Enum
-from uuid import UUID
 
-from pydantic import BaseModel  # pylint: disable=no-name-in-module
-
-
-class UserRole(str, Enum):
-    user = "user"
-    admin = "admin"
-
-
-class UserStatus(str, Enum):
-    active = "active"
-    deleted = "deleted"
+from pydantic import BaseModel
 
 
 class Error(BaseModel):
@@ -21,6 +9,5 @@ class Error(BaseModel):
     error_loc: tp.Optional[tp.Any] = None
 
 
-class UserBase(BaseModel):
-    id: UUID
-    email:
+class ErrorResponse(BaseModel):
+    errors: tp.List[Error]
