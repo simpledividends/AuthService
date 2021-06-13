@@ -13,8 +13,8 @@ jobs:
         image: postgres:latest
         env:
           POSTGRES_DB: db
-          POSTGRES_PASSWORD: user
-          POSTGRES_USER: pass
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
         ports:
           - 5432:5432
         # Set health checks to wait until postgres has started
