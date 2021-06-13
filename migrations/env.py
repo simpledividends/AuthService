@@ -1,12 +1,11 @@
+import os
 from logging.config import fileConfig
-from os import getenv
 
 from alembic import context
 from sqlalchemy import create_engine, pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-from auth_service.db import Model
 
 config = context.config
 
@@ -14,9 +13,8 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
-base_url = getenv("DB_URL")
-schema = getenv("DB_SCHEMA")
-url = f"{base_url}?options=-csearch_path={schema}"
+
+url = os.getenv("DB_URL")
 
 
 def run_migrations_offline():
