@@ -1,8 +1,7 @@
 import logging.config
 
 from .context import REQUEST_ID
-from .settings import get_config
-
+from .settings import ServiceConfig
 
 app_logger = logging.getLogger("app")
 access_logger = logging.getLogger("access")
@@ -17,15 +16,11 @@ ACCESS_LOG_FORMAT = (
     'request_time="%Tf" '
 )
 
-config = get_config()
-LEVEL = config.log_config.level
-DATETIME_FORMAT = config.log_config.datetime_format
-
 
 class ServiceNameFilter(logging.Filter):
 
-    def __init__(self, name: str = ""):
-        self.service_name = config.service_name
+    def __init__(self, name: str = "", service_name: str = "") -> None:
+        self.service_name = service_name
 
         super().__init__(name)
 
@@ -36,7 +31,7 @@ class ServiceNameFilter(logging.Filter):
 
 
 class RequestIDFilter(logging.Filter):
-    def __init__(self, name: str = ""):
+    def __init__(self, name: str = "") -> None:
         self.context_var = REQUEST_ID
 
         super().__init__(name)
@@ -47,22 +42,26 @@ class RequestIDFilter(logging.Filter):
         return super().filter(record)
 
 
-CONFIG = {
+def setup_logging(service_config: ServiceConfig) -> None:
+    level = service_config.log_config.level
+    datetime_format = service_config.log_config.datetime_format
+
+    config = {
         "version": 1,
         "disable_existing_loggers": True,
         "loggers": {
             "root": {
-                "level": LEVEL,
+                "level": level,
                 "handlers": ["console"],
                 "propagate": False,
             },
             app_logger.name: {
-                "level": LEVEL,
+                "level": level,
                 "handlers": ["console"],
                 "propagate": False,
             },
             access_logger.name: {
-                "level": LEVEL,
+                "level": level,
                 "handlers": ["access"],
                 "propagate": False,
             },
@@ -126,7 +125,7 @@ CONFIG = {
                     'request_id="%(request_id)s" '
                     'message="%(message)s" '
                 ),
-                "datefmt": DATETIME_FORMAT,
+                "datefmt": datetime_format,
             },
             "access": {
                 "format": (
@@ -141,7 +140,7 @@ CONFIG = {
                     'status_code="%(status_code)s" '
                     'request_time="%(request_time)s" '
                 ),
-                "datefmt": DATETIME_FORMAT,
+                "datefmt": datetime_format,
             },
             "gunicorn.access": {
                 "format": (
@@ -152,15 +151,16 @@ CONFIG = {
                     'request_id="%(request_id)s" '
                     '"%(message)s"'
                 ),
-                "datefmt": DATETIME_FORMAT,
+                "datefmt": datetime_format,
             },
         },
         "filters": {
-            "service_name": {"()": "auth_service.log.ServiceNameFilter"},
+            "service_name": {
+                "()": "auth_service.log.ServiceNameFilter",
+                "service_name": service_config.service_name,
+            },
             "request_id": {"()": "auth_service.log.RequestIDFilter"},
         },
     }
 
-
-def setup_logging() -> None:
-    logging.config.dictConfig(CONFIG)
+    logging.config.dictConfig(config)
