@@ -99,11 +99,11 @@ def make_db_registration_token(
     token: str,
     user_id: tp.Optional[UUID] = None,
     created_at: datetime = datetime(2021, 6, 12),
-    expired_at: datetime = utc_now() + timedelta(days=10),
+    expired_at: tp.Optional[datetime] = None,
 ) -> RegistrationTokenTable:
     return RegistrationTokenTable(
         token=token,
         user_id=str(user_id or uuid4()),
         created_at=created_at,
-        expired_at=expired_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
     )
