@@ -1,4 +1,5 @@
 import logging.config
+import typing as tp
 
 from .context import REQUEST_ID
 from .settings import ServiceConfig
@@ -42,7 +43,7 @@ class RequestIDFilter(logging.Filter):
         return super().filter(record)
 
 
-def setup_logging(service_config: ServiceConfig) -> None:
+def get_config(service_config: ServiceConfig) -> tp.Dict[str, tp.Any]:
     level = service_config.log_config.level
     datetime_format = service_config.log_config.datetime_format
 
@@ -163,4 +164,9 @@ def setup_logging(service_config: ServiceConfig) -> None:
         },
     }
 
+    return config
+
+
+def setup_logging(service_config: ServiceConfig) -> None:
+    config = get_config(service_config)
     logging.config.dictConfig(config)
