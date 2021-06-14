@@ -34,19 +34,19 @@ class NewcomerTable(Base):
     name = Column(pg.VARCHAR(128), nullable=False)
     email = Column(pg.VARCHAR(128), unique=True, index=True, nullable=False)
     password = Column(pg.VARCHAR(128), nullable=False)
-    created_at = Column(pg.TIMESTAMP, default=utc_now, nullable=False)
+    created_at = Column(pg.TIMESTAMP, nullable=False)
 
 
 class RegistrationTokenTable(Base):
     __tablename__ = "registration_tokens"
 
-    token = Column(pg.VARCHAR(64), primary_key=True, nullable=False)
+    token = Column(pg.VARCHAR(64), primary_key=True)
     user_id = Column(
         pg.UUID,
         ForeignKey(NewcomerTable.user_id),
         nullable=False,
     )
-    created_at = Column(pg.TIMESTAMP, default=utc_now, nullable=False)
+    created_at = Column(pg.TIMESTAMP, nullable=False)
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
     user = orm.relationship(NewcomerTable)
