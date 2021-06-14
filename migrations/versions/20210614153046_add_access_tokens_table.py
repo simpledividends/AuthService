@@ -32,7 +32,14 @@ def upgrade():
             ondelete="CASCADE",
         ),
     )
+    op.create_index(
+        op.f("ix_access_session_id"),
+        "access_tokens",
+        ["session_id"],
+        unique=False
+    )
 
 
 def downgrade():
+    op.drop_index(op.f("ix_access_session_id"), table_name="access_tokens")
     op.drop_table("access_tokens")
