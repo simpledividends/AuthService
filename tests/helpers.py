@@ -18,7 +18,6 @@ from auth_service.db.models import (
     SessionTable,
     UserTable,
 )
-from auth_service.models.auth import TokenPair
 from auth_service.models.user import UserRole
 from auth_service.security import SecurityService
 from auth_service.utils import utc_now

@@ -26,8 +26,11 @@ from tests.constants import (
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
 )
-from tests.helpers import DBObjectCreator, FakeMailgunServer, \
-    check_access_forbidden
+from tests.helpers import (
+    DBObjectCreator,
+    FakeMailgunServer,
+    check_access_forbidden,
+)
 
 CURRENT_DIR = Path(__file__).parent
 ALEMBIC_INI_PATH = CURRENT_DIR.parent / "alembic.ini"
