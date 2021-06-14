@@ -24,7 +24,7 @@
             <td style="padding: 40px 10% ;text-align: center;">
                 <div style="font-family: 'Segoe UI', sans-serif; font-size:14px; color:#000000; line-height: 20px;">
                     <h3>Подтверждение адреса электроной почты</h3>
-                    {{ newcomer.name.upper() }},
+                    {{ newcomer.name.capitalize() }},
                     недавно вы зарегистрировались на Simple Dividends.
                     <br>
                     Для подтверждения адреса электронной почты нажмите на кнопку ниже
@@ -32,7 +32,7 @@
                 <br>
                 <div style="font-family: Helvetica, Arial, Helvetica, sans-serif; font-size:12px; color:#000000; line-height: 20px;">
                     <b style="font-size: 14px; letter-spacing: 1px;">
-                        <a href="{{link}}}">Подтвердить</a>
+                        <a href="{{ link }}">Подтвердить</a>
                     </b>
                     <br>
                     Кнопка работает в течение суток.
