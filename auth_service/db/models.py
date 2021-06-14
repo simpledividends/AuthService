@@ -76,3 +76,19 @@ class AccessTokenTable(Base):
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
     session = orm.relationship(SessionTable)
+
+
+class RefreshTokenTable(Base):
+    __tablename__ = "refresh_tokens"
+
+    token = Column(pg.VARCHAR(64), primary_key=True)
+    session_id = Column(
+        pg.UUID,
+        ForeignKey(SessionTable.session_id),
+        nullable=False,
+        unique=True
+    )
+    created_at = Column(pg.TIMESTAMP, nullable=False)
+    expired_at = Column(pg.TIMESTAMP, nullable=False)
+
+    session = orm.relationship(SessionTable)
