@@ -324,3 +324,14 @@ class DBService(BaseModel):
         if record is None:
             raise UserNotExists()
         return User(**record)
+
+    async def get_user(self, user_id: UUID) -> User:
+        query = """
+            SELECT user_id, name, email, created_at, verified_at, role
+            FROM users
+            WHERE user_id = $1::UUID
+        """
+        record = await self.pool.fetchrow(query, user_id)
+        if record is None:
+            raise UserNotExists()
+        return User(**record)
