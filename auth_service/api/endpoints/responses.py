@@ -43,21 +43,40 @@ unprocessable_entity_or_password_invalid = {
 }
 
 
-conflict = {
+conflict_register = {
     "model": ErrorResponse,
-    "description": "Error: Conflict",
+    "description": "Error: Conflict when register new user",
     "content": {
         "application/json": {
             "example": ErrorResponse(
                 errors=[
                     Error(
                         error_key="email.already_exists",
-                        error_message="User is already exists",
+                        error_message="User with this email is already exists",
                         error_loc=None,
                     ),
                     Error(
                         error_key="conflict",
                         error_message="Conflict",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}
+
+
+conflict_register_verify = {
+    "model": ErrorResponse,
+    "description": "Error: Conflict when verify new user",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="email.already_verified",
+                        error_message="User with this email is already exists",
                         error_loc=None,
                     ),
                 ],

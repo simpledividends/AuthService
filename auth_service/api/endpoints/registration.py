@@ -6,20 +6,22 @@ from starlette.background import BackgroundTasks
 from auth_service.api.endpoints import responses
 from auth_service.api.exceptions import (
     InvalidPasswordError,
-    UserConflictException,
+    UserConflictException, ForbiddenException,
 )
 from auth_service.api.services import (
     get_db_service,
     get_mail_service,
     get_security_service,
 )
-from auth_service.db.service import (
-    DBService,
+from auth_service.db.exceptions import (
+    TokenNotFound,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
 )
+from auth_service.db.service import DBService
 from auth_service.mail.service import MailService
-from auth_service.models.user import Newcomer, NewcomerRegistered
+from auth_service.models.token import VerificationRequest
+from auth_service.models.user import Newcomer, NewcomerRegistered, User
 from auth_service.security import SecurityService
 
 router = APIRouter()
@@ -45,7 +47,7 @@ async def make_registration_mail(
     response_model=Newcomer,
     responses={
         422: responses.unprocessable_entity_or_password_invalid,
-        409: responses.conflict,
+        409: responses.conflict_register,
     }
 )
 async def register(
@@ -79,3 +81,34 @@ async def register(
         mail_service=get_mail_service(request.app),
     )
     return newcomer_created
+
+
+@router.post(
+    path="/auth/register/verify",
+    tags=["Registration"],
+    status_code=HTTPStatus.OK,
+    response_model=User,
+    responses={
+        422: responses.unprocessable_entity,
+        409: responses.conflict_register_verify,
+    }
+)
+async def verify_registered_user(
+    request: Request,
+    verification: VerificationRequest,
+) -> User:
+    security_service = get_security_service(request.app)
+    hashed_token = security_service.hash_token_string(verification.token)
+
+    db_service = get_db_service(request.app)
+    try:
+        user = await db_service.verify_newcomer(hashed_token)
+    except TokenNotFound:
+        raise ForbiddenException()
+    except UserAlreadyExists:
+        raise UserConflictException(
+            error_key="email.already_verified",
+            error_message="User with this email is already exists",
+        )
+
+    return user
