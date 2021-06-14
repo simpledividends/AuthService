@@ -8,6 +8,7 @@ from asyncpg.pool import Pool
 from pydantic import BaseModel
 
 from auth_service.db.exceptions import (
+    NotExists,
     TokenNotFound,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
@@ -335,3 +336,51 @@ class DBService(BaseModel):
         if record is None:
             raise UserNotExists()
         return User(**record)
+
+    async def finish_session(self, token: str) -> None:
+        func = partial(self._finish_session, token=token)
+        await self.execute_serializable_transaction(func)
+
+    async def _finish_session(self, conn: Connection, token: str) -> None:
+        session_id = await self._get_session_id_by_access_token(conn, token)
+        await self._drop_access_tokens(conn, session_id)
+        await self._drop_refresh_tokens(conn, session_id)
+
+        query = """
+            UPDATE sessions
+            SET finished_at = $1::TIMESTAMP
+            WHERE session_id = $2::UUID
+        """
+        await conn.execute(query, utc_now(), session_id)
+
+    @staticmethod
+    async def _get_session_id_by_access_token(
+        conn: Connection,
+        token: str,
+    ) -> UUID:
+        query = """
+            SELECT s.session_id
+            FROM sessions s
+                JOIN access_tokens t on s.session_id = t.session_id
+            WHERE t.token = $1::VARCHAR AND t.expired_at > $2::TIMESTAMP
+        """
+        session_id = await conn.fetchval(query, token, utc_now())
+        if session_id is None:
+            raise NotExists()
+        return session_id
+
+    @staticmethod
+    async def _drop_access_tokens(conn: Connection, session_id: UUID) -> None:
+        query = """
+            DELETE FROM access_tokens
+            WHERE session_id = $1::UUID
+        """
+        await conn.execute(query, session_id)
+
+    @staticmethod
+    async def _drop_refresh_tokens(conn: Connection, session_id: UUID) -> None:
+        query = """
+            DELETE FROM refresh_tokens
+            WHERE session_id = $1::UUID
+        """
+        await conn.execute(query, session_id)

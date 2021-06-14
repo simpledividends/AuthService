@@ -1,13 +1,20 @@
 import asyncio
+import typing as tp
 from http import HTTPStatus
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Security
+from starlette.responses import JSONResponse
 
+from auth_service.api.auth import (
+    auth_api_key_header,
+    extract_token_from_header,
+)
 from auth_service.api.endpoints import responses
 from auth_service.api.exceptions import ForbiddenException
 from auth_service.api.services import get_db_service, get_security_service
-from auth_service.db.exceptions import UserNotExists
+from auth_service.db.exceptions import NotExists, UserNotExists
 from auth_service.models.auth import Credentials, TokenPair
+from auth_service.response import create_response
 
 router = APIRouter()
 
@@ -49,3 +56,29 @@ async def login(
         db_service.add_refresh_token(refresh),
     )
     return TokenPair(access_token=access_string, refresh_token=refresh_string)
+
+
+@router.post(
+    path="/auth/logout",
+    tags=["Session"],
+    status_code=HTTPStatus.OK,
+    responses={
+        403: responses.forbidden,
+    }
+)
+async def logout(
+    request: Request,
+    header: tp.Optional[str] = Security(auth_api_key_header)
+) -> JSONResponse:
+    token = extract_token_from_header(header)
+
+    security_service = get_security_service(request.app)
+    hashed_token = security_service.hash_token_string(token)
+
+    db_service = get_db_service(request.app)
+    try:
+        await db_service.finish_session(hashed_token)
+    except NotExists:
+        raise ForbiddenException()
+
+    return create_response(status_code=HTTPStatus.OK)
