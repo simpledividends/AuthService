@@ -184,7 +184,7 @@ def check_access_forbidden(
     client: TestClient,
     security_service: SecurityService,
     create_db_object: DBObjectCreator,
-    path: str,
+    request_params: tp.Dict[str, tp.Any],
 ) -> None:
     cases = (
         ("NotAuthorization", "Bearer ", None, "authorization.not_set"),
@@ -209,8 +209,8 @@ def check_access_forbidden(
         token = token or access_token
 
         with client:
-            resp = client.post(
-                path,
+            resp = client.request(
+                **request_params,
                 headers={key: value_beginning + token}
             )
 

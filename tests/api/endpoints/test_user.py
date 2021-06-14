@@ -21,7 +21,7 @@ def test_get_me_success(
     )
 
     with client:
-        resp = client.post(
+        resp = client.get(
             GET_ME_PATH,
             headers={"Authorization": f"Bearer {access_token}"}
         )
@@ -33,6 +33,6 @@ def test_get_me_success(
 
 
 def test_get_me_forbidden(
-    access_forbidden_check: tp.Callable[[str], None]
+    access_forbidden_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
 ) -> None:
-    access_forbidden_check(GET_ME_PATH)
+    access_forbidden_check({"method": "GET", "url": GET_ME_PATH})

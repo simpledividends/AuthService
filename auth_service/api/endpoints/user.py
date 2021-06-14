@@ -9,7 +9,7 @@ from auth_service.models.user import User
 router = APIRouter()
 
 
-@router.post(
+@router.get(
     path="/auth/users/me",
     tags=["User"],
     status_code=HTTPStatus.OK,

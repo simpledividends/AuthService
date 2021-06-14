@@ -165,14 +165,14 @@ def access_forbidden_check(
     client: TestClient,
     security_service: SecurityService,
     create_db_object: DBObjectCreator,
-) -> tp.Callable[[str], None]:
+) -> tp.Callable[[tp.Dict[str, tp.Any]], None]:
 
-    def check(path: str) -> None:
+    def check(request_params: tp.Dict[str, tp.Any]) -> None:
         check_access_forbidden(
             client,
             security_service,
             create_db_object,
-            path,
+            request_params,
         )
 
     return check
