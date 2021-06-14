@@ -1,3 +1,4 @@
+import typing as tp
 from datetime import timedelta
 from http import HTTPStatus
 
@@ -17,11 +18,13 @@ from auth_service.utils import utc_now
 from tests.helpers import (
     DBObjectCreator,
     assert_all_tables_are_empty,
+    create_authorized_user,
     make_db_user,
 )
 from tests.utils import ApproxDatetime
 
 LOGIN_PATH = "/auth/login"
+LOGOUT_PATH = "/auth/logout"
 
 
 def test_login_success(
@@ -108,3 +111,77 @@ def test_login_forbidden(
     assert resp.status_code == HTTPStatus.FORBIDDEN
     assert resp.json()["errors"][0]["error_key"] == "credentials.invalid"
     assert_all_tables_are_empty(db_session, [UserTable])
+
+
+def test_logout_success(
+    client: TestClient,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    _, access_token = create_authorized_user(
+        security_service,
+        create_db_object,
+    )
+
+    with client:
+        resp = client.post(
+            LOGOUT_PATH,
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+    assert resp.status_code == HTTPStatus.OK
+
+    assert_all_tables_are_empty(db_session, [UserTable, SessionTable])
+    assert len(db_session.query(UserTable).all()) == 1
+    sessions = db_session.query(SessionTable).all()
+    assert len(sessions) == 1
+    assert sessions[0].finished_at == ApproxDatetime(utc_now())
+
+
+def test_logout_only_current_user(
+    client: TestClient,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    _, access_token = create_authorized_user(
+        security_service,
+        create_db_object,
+    )
+
+    other_user_id, _ = create_authorized_user(
+        security_service,
+        create_db_object,
+    )
+
+    with client:
+        resp = client.post(
+            LOGOUT_PATH,
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+    assert resp.status_code == HTTPStatus.OK
+
+    assert_all_tables_are_empty(
+        db_session,
+        [UserTable, SessionTable, AccessTokenTable, RefreshTokenTable]
+    )
+    assert len(db_session.query(UserTable).all()) == 2
+    other_session = (
+        db_session
+        .query(SessionTable)
+        .filter_by(user_id=other_user_id)
+        .first()
+    )
+    assert other_session.finished_at is None
+    assert len(
+        db_session
+        .query(AccessTokenTable)
+        .filter_by(session_id=other_session.session_id)
+        .all()
+    ) == 1
+
+
+def test_logout_forbidden(
+    access_forbidden_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
+) -> None:
+    access_forbidden_check({"method": "POST", "url": LOGOUT_PATH})
