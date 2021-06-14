@@ -2,7 +2,9 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, constr
+from pydantic import BaseModel, constr
+
+from auth_service.models.common import Email
 
 
 class UserRole(str, Enum):
@@ -11,13 +13,6 @@ class UserRole(str, Enum):
 
 
 Name = constr(strip_whitespace=True, min_length=1, max_length=50)
-
-
-class Email(EmailStr):
-
-    @classmethod
-    def validate(cls, value: str) -> str:
-        return super().validate(value).strip().lower()
 
 
 class NewcomerBase(BaseModel):

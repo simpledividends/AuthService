@@ -1,7 +1,7 @@
 import asyncio
 import typing as tp
 from functools import partial
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from asyncpg import Connection, Record, SerializationError
 from asyncpg.pool import Pool
@@ -10,10 +10,12 @@ from pydantic import BaseModel
 from auth_service.db.exceptions import (
     TokenNotFound,
     TooManyNewcomersWithSameEmail,
-    UserAlreadyExists,
+    UserAlreadyExists, UserNotExists,
 )
 from auth_service.log import app_logger
-from auth_service.models.token import RegistrationToken
+from auth_service.models.auth import TokenPair
+from auth_service.models.token import RegistrationToken, AccessToken, \
+    RefreshToken
 from auth_service.models.user import (
     Newcomer,
     NewcomerRegistered,
@@ -223,3 +225,80 @@ class DBService(BaseModel):
         """
         record = await conn.fetchrow(query, token, utc_now())
         return record
+
+    async def get_user_with_password(self, email: str) -> tp.Tuple[UUID, str]:
+        query = """
+            SELECT user_id, password
+            FROM users
+            WHERE email = $1::VARCHAR
+        """
+        record = await self.pool.fetchrow(query, email)
+        if record is None:
+            raise UserNotExists()
+        return record.user_id, record.password
+
+    async def create_session(self, user_id: UUID) -> UUID:
+        query = """
+            INSERT INTO sessions
+                (session_id, user_id, started_at, finished_at)
+            VALUES
+                (
+                    $1::UUID
+                    , $2::UUID
+                    , $3::TIMESTAMP
+                    , $4::TIMESTAMP
+                )
+            RETURNING
+                session_id
+            ;
+        """
+        record = await self.pool.fetchrow(
+            query,
+            uuid4(),
+            user_id,
+            utc_now(),
+            None,
+        )
+        return record.session_id
+
+    async def add_access_token(self, token: AccessToken) -> None:
+        query = """
+            INSERT INTO access_tokens
+                (token, session_id, created_at, expired_at)
+            VALUES
+                (
+                    $1::VARCHAR
+                    , $2::UUID
+                    , $3::TIMESTAMP
+                    , $4::TIMESTAMP
+                )
+            ;
+        """
+        await self.pool.execute(
+            query,
+            token.token,
+            token.session_id,
+            token.created_at,
+            token.expired_at,
+        )
+
+    async def add_refresh_token(self, token: RefreshToken) -> None:
+        query = """
+            INSERT INTO refresh_tokens
+                (token, session_id, created_at, expired_at)
+            VALUES
+                (
+                    $1::VARCHAR
+                    , $2::UUID
+                    , $3::TIMESTAMP
+                    , $4::TIMESTAMP
+                )
+            ;
+        """
+        await self.pool.execute(
+            query,
+            token.token,
+            token.session_id,
+            token.created_at,
+            token.expired_at,
+        )

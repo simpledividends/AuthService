@@ -4,10 +4,6 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-class VerificationRequest(BaseModel):
-    token: str
-
-
 class Token(BaseModel):
     token: str
     created_at: datetime
