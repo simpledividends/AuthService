@@ -44,7 +44,7 @@ async def test_verification_when_users_exist_with_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
     db_session: orm.Session,
-    create_db_object: tp.Callable[[Base], None]
+    create_db_object: DBObjectCreator
 ) -> None:
     n = 10
 

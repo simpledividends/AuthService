@@ -18,6 +18,9 @@ from auth_service.models.user import UserRole
 from auth_service.utils import utc_now
 
 
+DBObjectCreator = tp.Callable[[Base], None]
+
+
 class FakeMailgunServer:
 
     def __init__(self) -> None:

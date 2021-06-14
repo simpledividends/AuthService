@@ -107,7 +107,7 @@ def mailgun_server_url(
 @pytest.fixture
 def create_db_object(
     db_session: orm.Session,
-) -> tp.Callable[[Base], None]:
+) -> DBObjectCreator:
     assert db_session.is_active
 
     def create(obj: Base) -> None:
