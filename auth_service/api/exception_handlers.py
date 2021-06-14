@@ -7,9 +7,9 @@ from starlette import status
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
-from auth_service.models import Error
-from auth_service.response import create_response, server_error
 from auth_service.log import app_logger
+from auth_service.models.common import Error
+from auth_service.response import create_response, server_error
 
 from .exceptions import AppException
 
