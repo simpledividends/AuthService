@@ -37,3 +37,14 @@ class UserConflictException(AppException):
         error_loc: tp.Optional[tp.Sequence[str]] = None,
     ) -> None:
         super().__init__(status_code, error_key, error_message, error_loc)
+
+
+class ForbiddenException(AppException):
+    def __init__(
+        self,
+        status_code: int = HTTPStatus.FORBIDDEN,
+        error_key: str = "forbidden",
+        error_message: str = "Forbidden",
+        error_loc: tp.Optional[tp.Sequence[str]] = None,
+    ):
+        super().__init__(status_code, error_key, error_message, error_loc)
