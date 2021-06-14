@@ -48,3 +48,14 @@ class ForbiddenException(AppException):
         error_loc: tp.Optional[tp.Sequence[str]] = None,
     ):
         super().__init__(status_code, error_key, error_message, error_loc)
+
+
+class NotFoundException(AppException):
+    def __init__(
+        self,
+        status_code: int = HTTPStatus.NOT_FOUND,
+        error_key: str = "not_found",
+        error_message: str = "Resource not found",
+        error_loc: tp.Optional[tp.Sequence[str]] = None,
+    ):
+        super().__init__(status_code, error_key, error_message, error_loc)
