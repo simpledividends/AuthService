@@ -5,8 +5,9 @@ from starlette.background import BackgroundTasks
 
 from auth_service.api.endpoints import responses
 from auth_service.api.exceptions import (
+    ForbiddenException,
     InvalidPasswordError,
-    UserConflictException, ForbiddenException,
+    UserConflictException,
 )
 from auth_service.api.services import (
     get_db_service,

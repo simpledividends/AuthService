@@ -172,7 +172,7 @@ class DBService(BaseModel):
         if newcomer is None:
             raise TokenNotFound()
 
-        n_users = await self._count_users_by_email(conn, newcomer.email)
+        n_users = await self._count_users_by_email(conn, newcomer["email"])
         if n_users > 0:
             raise UserAlreadyExists()
 
@@ -186,8 +186,8 @@ class DBService(BaseModel):
                     , $3::VARCHAR
                     , $4::VARCHAR
                     , $5::TIMESTAMP
-                    , $5::TIMESTAMP
-                    , $5::VARCHAR
+                    , $6::TIMESTAMP
+                    , $7::role_enum
                 )
             RETURNING
                 user_id
@@ -200,11 +200,11 @@ class DBService(BaseModel):
         """
         record = await conn.fetchrow(
             query,
-            newcomer.user_id,
-            newcomer.name,
-            newcomer.email,
-            newcomer.password,
-            newcomer.created_at,
+            newcomer["user_id"],
+            newcomer["name"],
+            newcomer["email"],
+            newcomer["password"],
+            newcomer["created_at"],
             utc_now(),
             UserRole.user,
         )

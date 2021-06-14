@@ -31,11 +31,14 @@ from tests.constants import (
 from tests.helpers import (
     FakeMailgunServer,
     assert_all_tables_are_empty,
+    make_db_newcomer,
+    make_db_registration_token,
     make_db_user,
 )
 from tests.utils import ApproxDatetime
 
 REGISTRATION_PATH = "/auth/register"
+REGISTER_VERIFY_PATH = "/auth/register/verify"
 
 REGISTER_REQUEST_BODY = {
     "name": USER_NAME,
@@ -244,3 +247,107 @@ def test_registration_when_newcomers_exist(
     )
 
     assert len(fake_mailgun_server.requests) == max_same_newcomers
+
+
+def test_register_verify_success(
+    client: TestClient,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: tp.Callable[[Base], None],
+) -> None:
+    newcomer = make_db_newcomer()
+    token_string = "abracadabra"
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_db_registration_token(token_hashed, user_id=newcomer.user_id)
+    create_db_object(newcomer)
+    create_db_object(token)
+
+    with client:
+        resp = client.post(
+            REGISTER_VERIFY_PATH,
+            json={"token": token_string},
+        )
+
+    # Check response
+    assert resp.status_code == HTTPStatus.OK
+    resp_json = resp.json()
+    verified_at = resp_json.pop("verified_at")
+    assert datetime.fromisoformat(verified_at) == ApproxDatetime(utc_now())
+    expected_response = {
+        "user_id": newcomer.user_id,
+        "name": newcomer.name,
+        "email": newcomer.email,
+        "created_at": newcomer.created_at.isoformat(),
+        "role": "user",
+    }
+    assert resp_json == expected_response
+
+    # Check DB
+    assert_all_tables_are_empty(
+        db_session,
+        [UserTable, NewcomerTable, RegistrationTokenTable],
+    )
+    assert len(db_session.query(NewcomerTable).all()) == 1
+    assert len(db_session.query(RegistrationTokenTable).all()) == 1
+    users = db_session.query(UserTable).all()
+    assert len(users) == 1
+    user = users[0]
+    for attr in ("user_id", "name", "email", "password", "created_at"):
+        assert getattr(newcomer, attr) == getattr(user, attr)
+    assert user.verified_at.isoformat() == verified_at
+    assert user.role == "user"
+
+
+@pytest.mark.parametrize(
+    "token_string,expired_at",
+    (
+        ("other_token", utc_now() + timedelta(days=10)),
+        ("my_token", utc_now() - timedelta(days=10)),
+    )
+)
+def test_register_verify_incorrect_token(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: tp.Callable[[Base], None],
+    token_string: str,
+    expired_at: datetime,
+) -> None:
+    newcomer = make_db_newcomer()
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_db_registration_token(
+        token_hashed,
+        user_id=newcomer.user_id,
+        expired_at=expired_at,
+    )
+    create_db_object(newcomer)
+    create_db_object(token)
+
+    with client:
+        resp = client.post(
+            REGISTER_VERIFY_PATH,
+            json={"token": "my_token"},
+        )
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_register_verify_user_already_exists(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: tp.Callable[[Base], None],
+) -> None:
+    newcomer = make_db_newcomer()
+    token_string = "abracadabra"
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_db_registration_token(token_hashed, user_id=newcomer.user_id)
+    user = make_db_user(email=newcomer.email)
+    create_db_object(newcomer)
+    create_db_object(token)
+    create_db_object(user)
+
+    with client:
+        resp = client.post(
+            REGISTER_VERIFY_PATH,
+            json={"token": token_string},
+        )
+    assert resp.status_code == HTTPStatus.CONFLICT
+    assert resp.json()["errors"][0]["error_key"] == "email.already_verified"
