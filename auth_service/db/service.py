@@ -238,7 +238,7 @@ class DBService(BaseModel):
         record = await self.pool.fetchrow(query, email)
         if record is None:
             raise UserNotExists()
-        return record.user_id, record.password
+        return record["user_id"], record["password"]
 
     async def create_session(self, user_id: UUID) -> UUID:
         query = """
@@ -262,7 +262,7 @@ class DBService(BaseModel):
             utc_now(),
             None,
         )
-        return record.session_id
+        return record["session_id"]
 
     async def add_access_token(self, token: AccessToken) -> None:
         query = """
