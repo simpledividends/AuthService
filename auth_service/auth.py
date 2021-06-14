@@ -1,12 +1,12 @@
+import typing as tp
+
 from fastapi import Request, Security
 from fastapi.security import APIKeyHeader
 
 from auth_service.api.exceptions import ForbiddenException
-from auth_service.api.services import get_security_service, get_db_service
+from auth_service.api.services import get_db_service, get_security_service
 from auth_service.db.exceptions import UserNotExists
 from auth_service.models.user import User
-import typing as tp
-
 
 AUTHORIZATION_HEADER = "Authorization"
 BEARER_SCHEME = "Bearer"

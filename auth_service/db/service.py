@@ -308,7 +308,13 @@ class DBService(BaseModel):
 
     async def get_user_by_access_token(self, token: str) -> User:
         query = """
-            SELECT user_id, name, email, created_at, verified_at, role
+            SELECT
+                u.user_id
+                , u.name
+                , u.email
+                , u.created_at
+                , u.verified_at
+                , u.role
             FROM users u
                 JOIN sessions s on u.user_id = s.user_id
                 JOIN access_tokens t on s.session_id = t.session_id
