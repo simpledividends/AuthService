@@ -17,7 +17,6 @@ from auth_service.db.models import (
 from auth_service.models.user import UserRole
 from auth_service.utils import utc_now
 
-
 DBObjectCreator = tp.Callable[[Base], None]
 
 

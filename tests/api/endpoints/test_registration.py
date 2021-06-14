@@ -10,7 +10,6 @@ from sqlalchemy import orm
 from starlette.testclient import TestClient
 
 from auth_service.db.models import (
-    Base,
     NewcomerTable,
     RegistrationTokenTable,
     UserTable,
@@ -29,11 +28,12 @@ from tests.constants import (
     USER_PASSWORD,
 )
 from tests.helpers import (
+    DBObjectCreator,
     FakeMailgunServer,
     assert_all_tables_are_empty,
     make_db_newcomer,
     make_db_registration_token,
-    make_db_user, DBObjectCreator,
+    make_db_user,
 )
 from tests.utils import ApproxDatetime
 

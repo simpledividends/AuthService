@@ -5,10 +5,10 @@ Revises: fec3f53dcd7f
 Create Date: 2021-06-14 15:30:54.509963
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import VARCHAR
-from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
+from sqlalchemy.dialects import postgresql as pg
 
 # revision identifiers, used by Alembic.
 revision = "479e659114ca"
@@ -21,17 +21,19 @@ def upgrade():
     op.create_table(
         "refresh_tokens",
         sa.Column("token", VARCHAR(64), nullable=False),
-        sa.Column("session_id", UUID, nullable=False),
-        sa.Column("created_at", TIMESTAMP, nullable=False),
-        sa.Column("expired_at", TIMESTAMP, nullable=False),
+        sa.Column("session_id", pg.UUID, nullable=False),
+        sa.Column("created_at", pg.TIMESTAMP, nullable=False),
+        sa.Column("expired_at", pg.TIMESTAMP, nullable=False),
 
-        sa.PrimaryKeyConstraint("token"),
         sa.ForeignKeyConstraint(
             columns=("session_id",),
             refcolumns=("sessions.session_id",),
             ondelete="CASCADE",
         ),
+        sa.PrimaryKeyConstraint("token"),
+
     )
+
     op.create_index(
         op.f("ix_refresh_session_id"),
         "refresh_tokens",

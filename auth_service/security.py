@@ -8,8 +8,12 @@ from passlib import hash as phash
 from pydantic.main import BaseModel
 from zxcvbn import zxcvbn
 
-from auth_service.models.token import RegistrationToken, AccessToken, \
-    RefreshToken, Token
+from auth_service.models.token import (
+    AccessToken,
+    RefreshToken,
+    RegistrationToken,
+    Token,
+)
 from auth_service.utils import utc_now
 
 ALPHABET = string.ascii_letters + string.digits

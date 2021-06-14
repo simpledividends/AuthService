@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request
 
 from auth_service.api.endpoints import responses
 from auth_service.api.exceptions import ForbiddenException
-from auth_service.api.services import get_security_service, get_db_service
+from auth_service.api.services import get_db_service, get_security_service
 from auth_service.db.exceptions import UserNotExists
 from auth_service.models.auth import Credentials, TokenPair
 

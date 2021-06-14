@@ -1,7 +1,7 @@
 import asyncio
 import typing as tp
 from functools import partial
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
 from asyncpg import Connection, Record, SerializationError
 from asyncpg.pool import Pool
@@ -10,12 +10,15 @@ from pydantic import BaseModel
 from auth_service.db.exceptions import (
     TokenNotFound,
     TooManyNewcomersWithSameEmail,
-    UserAlreadyExists, UserNotExists,
+    UserAlreadyExists,
+    UserNotExists,
 )
 from auth_service.log import app_logger
-from auth_service.models.auth import TokenPair
-from auth_service.models.token import RegistrationToken, AccessToken, \
-    RefreshToken
+from auth_service.models.token import (
+    AccessToken,
+    RefreshToken,
+    RegistrationToken,
+)
 from auth_service.models.user import (
     Newcomer,
     NewcomerRegistered,

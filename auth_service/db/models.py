@@ -3,7 +3,6 @@ from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 
 from auth_service.models.user import UserRole
-from auth_service.utils import utc_now
 
 Base: DeclarativeMeta = declarative_base()
 

@@ -5,9 +5,9 @@ Revises: c3522116d928
 Create Date: 2021-06-14 15:01:39.108107
 
 """
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
+from alembic import op
+from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 
 # revision identifiers, used by Alembic.
 

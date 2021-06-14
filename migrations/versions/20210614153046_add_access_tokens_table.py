@@ -5,14 +5,14 @@ Revises: 05d0c2f3267a
 Create Date: 2021-06-14 15:30:46.530827
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import VARCHAR
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 
 # revision identifiers, used by Alembic.
-revision = 'fec3f53dcd7f'
-down_revision = '05d0c2f3267a'
+revision = "fec3f53dcd7f"
+down_revision = "05d0c2f3267a"
 branch_labels = None
 depends_on = None
 

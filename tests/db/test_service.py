@@ -1,5 +1,4 @@
 import asyncio
-import typing as tp
 
 import pytest
 from sqlalchemy import orm
@@ -8,11 +7,15 @@ from auth_service.db.exceptions import (
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
 )
-from auth_service.db.models import Base, NewcomerTable, UserTable
+from auth_service.db.models import NewcomerTable, UserTable
 from auth_service.db.service import DBService
 from auth_service.models.user import NewcomerRegistered
 from auth_service.settings import ServiceConfig
-from tests.helpers import make_db_newcomer, make_db_registration_token
+from tests.helpers import (
+    DBObjectCreator,
+    make_db_newcomer,
+    make_db_registration_token,
+)
 
 
 @pytest.mark.asyncio
