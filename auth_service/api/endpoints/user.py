@@ -3,8 +3,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 
+from auth_service.api import responses
 from auth_service.api.auth import get_request_user
-from auth_service.api.endpoints import responses
 from auth_service.api.exceptions import NotFoundException
 from auth_service.api.services import get_db_service
 from auth_service.db.exceptions import UserNotExists
@@ -35,7 +35,8 @@ def get_me(
     response_model=User,
     responses={
         403: responses.forbidden,
-        404: responses.not_found
+        404: responses.not_found,
+        422: responses.unprocessable_entity,
     }
 )
 async def get_user(

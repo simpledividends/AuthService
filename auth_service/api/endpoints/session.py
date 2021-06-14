@@ -5,11 +5,11 @@ from http import HTTPStatus
 from fastapi import APIRouter, Request, Security
 from starlette.responses import JSONResponse
 
+from auth_service.api import responses
 from auth_service.api.auth import (
     auth_api_key_header,
     extract_token_from_header,
 )
-from auth_service.api.endpoints import responses
 from auth_service.api.exceptions import ForbiddenException
 from auth_service.api.services import get_db_service, get_security_service
 from auth_service.db.exceptions import NotExists, UserNotExists

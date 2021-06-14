@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fastapi import APIRouter, Request
 from starlette.background import BackgroundTasks
 
-from auth_service.api.endpoints import responses
+from auth_service.api import responses
 from auth_service.api.exceptions import (
     ForbiddenException,
     InvalidPasswordError,
