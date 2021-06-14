@@ -3,8 +3,9 @@ import asyncio
 import pytest
 from sqlalchemy import orm
 
+from auth_service.db.exceptions import TooManyNewcomersWithSameEmail
 from auth_service.db.models import NewcomerTable
-from auth_service.db.service import DBService, TooManyNewcomersWithSameEmail
+from auth_service.db.service import DBService
 from auth_service.models.user import NewcomerRegistered
 from auth_service.settings import ServiceConfig
 

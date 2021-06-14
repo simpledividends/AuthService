@@ -7,19 +7,15 @@ from asyncpg import Connection, SerializationError
 from asyncpg.pool import Pool
 from pydantic import BaseModel
 
+from auth_service.db.exceptions import (
+    TokenNotFound,
+    TooManyNewcomersWithSameEmail,
+    UserAlreadyExists,
+)
 from auth_service.log import app_logger
 from auth_service.models.token import RegistrationToken
 from auth_service.models.user import Newcomer, NewcomerRegistered
 from auth_service.utils import utc_now
-
-
-class UserAlreadyExists(Exception):
-    pass
-
-
-class TooManyNewcomersWithSameEmail(Exception):
-    pass
-
 
 T = tp.TypeVar("T")
 
