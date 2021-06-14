@@ -3,7 +3,7 @@ import typing as tp
 from functools import partial
 from uuid import uuid4
 
-from asyncpg import Connection, SerializationError
+from asyncpg import Connection, Record, SerializationError
 from asyncpg.pool import Pool
 from pydantic import BaseModel
 
@@ -14,7 +14,12 @@ from auth_service.db.exceptions import (
 )
 from auth_service.log import app_logger
 from auth_service.models.token import RegistrationToken
-from auth_service.models.user import Newcomer, NewcomerRegistered
+from auth_service.models.user import (
+    Newcomer,
+    NewcomerRegistered,
+    User,
+    UserRole,
+)
 from auth_service.utils import utc_now
 
 T = tp.TypeVar("T")
@@ -156,3 +161,65 @@ class DBService(BaseModel):
             token.created_at,
             token.expired_at,
         )
+
+    async def verify_newcomer(self, token: str) -> User:
+        func = partial(self._verify_newcomer, token=token)
+        user = await self.execute_serializable_transaction(func)
+        return user
+
+    async def _verify_newcomer(self, conn: Connection, token: str) -> User:
+        newcomer = await self._get_newcomer_by_token(conn, token)
+        if newcomer is None:
+            raise TokenNotFound()
+
+        n_users = await self._count_users_by_email(conn, newcomer.email)
+        if n_users > 0:
+            raise UserAlreadyExists()
+
+        query = """
+            INSERT INTO users
+                (user_id, name, email, password, created_at, verified_at, role)
+            VALUES
+                (
+                    $1::UUID
+                    , $2::VARCHAR
+                    , $3::VARCHAR
+                    , $4::VARCHAR
+                    , $5::TIMESTAMP
+                    , $5::TIMESTAMP
+                    , $5::VARCHAR
+                )
+            RETURNING
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+            ;
+        """
+        record = await conn.fetchrow(
+            query,
+            newcomer.user_id,
+            newcomer.name,
+            newcomer.email,
+            newcomer.password,
+            newcomer.created_at,
+            utc_now(),
+            UserRole.user,
+        )
+        return User(**record)
+
+    @staticmethod
+    async def _get_newcomer_by_token(
+        conn: Connection,
+        token: str,
+    ) -> tp.Optional[Record]:
+        query = """
+            SELECT *
+            FROM newcomers
+                JOIN registration_tokens rt on newcomers.user_id = rt.user_id
+            WHERE token = $1::VARCHAR and expired_at > $2::TIMESTAMP
+        """
+        record = await conn.fetchrow(query, token, utc_now())
+        return record

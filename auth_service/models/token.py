@@ -1,10 +1,11 @@
-import typing as tp
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
 
-T = tp.TypeVar("T", bound="Token")
+
+class VerificationRequest(BaseModel):
+    token: str
 
 
 class Token(BaseModel):
