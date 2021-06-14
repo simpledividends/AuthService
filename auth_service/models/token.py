@@ -16,3 +16,11 @@ class Token(BaseModel):
 
 class RegistrationToken(Token):
     user_id: UUID
+
+
+class AccessToken(Token):
+    session_id: UUID
+
+
+class RefreshToken(Token):
+    session_id: UUID

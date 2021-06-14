@@ -36,9 +36,10 @@ def make_db_service(config: ServiceConfig) -> DBService:
 
 def make_security_service(config: ServiceConfig) -> SecurityService:
     security_config = config.security_config.dict()
-    security_config["registration_token_lifetime"] = timedelta(
-        seconds=security_config.pop("registration_token_lifetime_seconds")
-    )
+    for token_type in ("registration", "access", "refresh"):
+        security_config[f"{token_type}_token_lifetime"] = timedelta(
+            seconds=security_config.pop(f"{token_type}_token_lifetime_seconds")
+        )
     service = SecurityService(**security_config)
     return service
 
