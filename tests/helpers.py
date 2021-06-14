@@ -9,12 +9,17 @@ from sqlalchemy import inspect, orm
 from sqlalchemy.sql import text
 
 from auth_service.db.models import (
+    AccessTokenTable,
     Base,
     NewcomerTable,
+    RefreshTokenTable,
     RegistrationTokenTable,
+    SessionTable,
     UserTable,
 )
+from auth_service.models.auth import TokenPair
 from auth_service.models.user import UserRole
+from auth_service.security import SecurityService
 from auth_service.utils import utc_now
 
 DBObjectCreator = tp.Callable[[Base], None]
@@ -108,4 +113,71 @@ def make_db_registration_token(
         user_id=str(user_id or uuid4()),
         created_at=created_at,
         expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_db_session(
+    session_id: tp.Optional[UUID] = None,
+    user_id: tp.Optional[UUID] = None,
+    started_at: datetime = datetime(2021, 6, 12),
+    finished_at: tp.Optional[datetime] = None,
+) -> SessionTable:
+    return SessionTable(
+        session_id=str(session_id or uuid4()),
+        user_id=str(user_id or uuid4()),
+        started_at=started_at,
+        finished_at=finished_at,
+    )
+
+
+def make_access_token(
+    token: str,
+    session_id: tp.Optional[UUID] = None,
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> AccessTokenTable:
+    return AccessTokenTable(
+        token=token,
+        session_id=str(session_id or uuid4()),
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_refresh_token(
+    token: str,
+    session_id: tp.Optional[UUID] = None,
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> RefreshTokenTable:
+    return RefreshTokenTable(
+        token=token,
+        session_id=str(session_id or uuid4()),
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def create_authorized_user(
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> tp.Tuple[UUID, TokenPair]:
+    user = make_db_user()
+    session = make_db_session(user_id=user.user_id)
+    a_token_string, a_token = security_service.make_access_token(uuid4())
+    r_token_string, r_token = security_service.make_refresh_token(uuid4())
+    access_token = make_access_token(
+        token=a_token.token,
+        session_id=session.session_id,
+    )
+    refresh_token = make_refresh_token(
+        token=r_token.token,
+        session_id=session.session_id,
+    )
+    for obj in (user, session, access_token, refresh_token):
+        create_db_object(obj)
+
+    return (
+        user.user_id,
+        TokenPair(access_token=a_token_string, refresh_token=r_token_string),
     )
