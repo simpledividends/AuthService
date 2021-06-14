@@ -50,3 +50,14 @@ class RegistrationTokenTable(Base):
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
     user = orm.relationship(NewcomerTable)
+
+
+class SessionTable(Base):
+    __tablename__ = "sessions"
+
+    session_id = Column(pg.UUID, primary_key=True)
+    user_id = Column(pg.UUID, ForeignKey(UserTable.user_id), nullable=False)
+    started_at = Column(pg.TIMESTAMP, nullable=False)
+    finished_at = Column(pg.TIMESTAMP, nullable=True)
+
+    user = orm.relationship(UserTable)
