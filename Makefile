@@ -44,13 +44,13 @@ cov: .coverage
 	coverage erase
 
 isort: .venv
-	isort $(SERVICE) $(TESTS) $(MIGRATIONS)
+	isort $(PROJECT) $(TESTS) $(MIGRATIONS)
 
 mypy: .venv
 	mypy $(PROJECT) $(TESTS)
 
 bandit: .venv
-	bandit -r $(PROJECT) $(TESTS) $(MIGRATIONS) --skip B101 --silent
+	bandit -r $(PROJECT) $(MIGRATIONS) --skip B101 --silent
 
 flake: .venv
 	flake8 $(PROJECT) $(TESTS) $(MIGRATIONS)
