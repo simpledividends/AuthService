@@ -10,7 +10,6 @@ from alembic import op
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 
 # revision identifiers, used by Alembic.
-
 revision = "05d0c2f3267a"
 down_revision = "c3522116d928"
 branch_labels = None

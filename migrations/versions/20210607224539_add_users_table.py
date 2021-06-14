@@ -7,12 +7,12 @@ Create Date: 2021-06-07 22:45:39.222347
 """
 import sqlalchemy as sa
 from alembic import op
-# revision identifiers, used by Alembic.
 from sqlalchemy import VARCHAR
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 
 from auth_service.db.models import role_enum
 
+# revision identifiers, used by Alembic.
 revision = "3343d6cd2589"
 down_revision = None
 branch_labels = None
