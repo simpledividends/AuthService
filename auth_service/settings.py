@@ -24,7 +24,7 @@ class SecurityConfig(Config):
     min_password_strength: int = 3
     password_hash_rounds: int = 100_000
     password_salt_size: int = 32
-    registration_token_lifetime_seconds: float = 3600 * 24 * 3
+    registration_token_lifetime_seconds: float = 3600 * 24 * 7
 
 
 class DBPoolConfig(Config):
