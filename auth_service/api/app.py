@@ -1,17 +1,17 @@
 import asyncio
-from concurrent.futures.thread import ThreadPoolExecutor
 import typing as tp
+from concurrent.futures.thread import ThreadPoolExecutor
 
 import uvloop
 from fastapi import FastAPI
 
-
+from ..log import app_logger, setup_logging
+from ..settings import ServiceConfig
 from .endpoints import add_routes
 from .events import add_events
 from .exception_handlers import add_exception_handlers
 from .middlewares import add_middlewares
-from ..log import app_logger, setup_logging
-from ..settings import ServiceConfig
+from .services import make_mail_service, make_security_service
 
 __all__ = ("create_app",)
 
@@ -32,14 +32,17 @@ def setup_asyncio() -> None:
 
 
 def create_app(config: ServiceConfig) -> FastAPI:
-    setup_logging()
+    setup_logging(config)
     setup_asyncio()
 
     app = FastAPI()
 
-    add_events(app)
+    app.state.security_service = make_security_service(config)
+    app.state.mail_service = make_mail_service(config)
+
     add_routes(app)
     add_middlewares(app, config.request_id_header)
     add_exception_handlers(app)
+    add_events(app, config)
 
     return app

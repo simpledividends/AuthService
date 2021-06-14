@@ -4,9 +4,9 @@ from http import HTTPStatus
 
 import orjson
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel  # pylint: disable=no-name-in-module
+from pydantic import BaseModel
 
-from auth_service.models import Error
+from auth_service.models.common import Error
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
