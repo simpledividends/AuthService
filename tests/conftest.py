@@ -26,7 +26,8 @@ from tests.constants import (
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
 )
-from tests.helpers import DBObjectCreator, FakeMailgunServer
+from tests.helpers import DBObjectCreator, FakeMailgunServer, \
+    check_access_forbidden
 
 CURRENT_DIR = Path(__file__).parent
 ALEMBIC_INI_PATH = CURRENT_DIR.parent / "alembic.ini"
@@ -157,3 +158,21 @@ def app(service_config: ServiceConfig, db_session: orm.Session) -> FastAPI:
 @pytest.fixture
 def client(app: FastAPI) -> TestClient:
     return TestClient(app=app)
+
+
+@pytest.fixture
+def access_forbidden_check(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> tp.Callable[[str], None]:
+
+    def check(path: str) -> None:
+        check_access_forbidden(
+            client,
+            security_service,
+            create_db_object,
+            path,
+        )
+
+    return check

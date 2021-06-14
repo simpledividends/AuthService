@@ -7,6 +7,7 @@ import orjson
 import werkzeug
 from sqlalchemy import inspect, orm
 from sqlalchemy.sql import text
+from starlette.testclient import TestClient
 
 from auth_service.db.models import (
     AccessTokenTable,
@@ -21,6 +22,7 @@ from auth_service.models.auth import TokenPair
 from auth_service.models.user import UserRole
 from auth_service.security import SecurityService
 from auth_service.utils import utc_now
+from tests.utils import random_email
 
 DBObjectCreator = tp.Callable[[Base], None]
 
@@ -69,7 +71,7 @@ def assert_all_tables_are_empty(
 def make_db_user(
     user_id: tp.Optional[UUID] = None,
     name: str = "user name",
-    email: str = "simple@dividends.ru",
+    email: tp.Optional[str] = None,
     password: str = "hashed_pass",
     created_at: datetime = datetime(2021, 6, 12),
     verified_at: datetime = datetime(2021, 6, 13),
@@ -78,7 +80,7 @@ def make_db_user(
     return UserTable(
         user_id=str(user_id or uuid4()),
         name=name,
-        email=email,
+        email=email or random_email(),
         password=password,
         created_at=created_at,
         verified_at=verified_at,
@@ -161,23 +163,56 @@ def make_refresh_token(
 def create_authorized_user(
     security_service: SecurityService,
     create_db_object: DBObjectCreator,
-) -> tp.Tuple[UUID, TokenPair]:
-    user = make_db_user()
+    user_role: UserRole = UserRole.user,
+    token_expired_at: tp.Optional[datetime] = None,
+) -> tp.Tuple[UUID, str]:
+    user = make_db_user(role=user_role)
     session = make_db_session(user_id=user.user_id)
-    a_token_string, a_token = security_service.make_access_token(uuid4())
-    r_token_string, r_token = security_service.make_refresh_token(uuid4())
-    access_token = make_access_token(
-        token=a_token.token,
+    token_string, token = security_service.make_access_token(uuid4())
+    token_db = make_access_token(
+        token=token.token,
         session_id=session.session_id,
+        expired_at=token_expired_at,
     )
-    refresh_token = make_refresh_token(
-        token=r_token.token,
-        session_id=session.session_id,
-    )
-    for obj in (user, session, access_token, refresh_token):
+    for obj in (user, session, token_db):
         create_db_object(obj)
 
-    return (
-        user.user_id,
-        TokenPair(access_token=a_token_string, refresh_token=r_token_string),
+    return user.user_id, token_string
+
+
+def check_access_forbidden(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    path: str,
+) -> None:
+    cases = (
+        ("NotAuthorization", "Bearer ", None, "authorization.not_set"),
+        ("Authorization", "Bearer", None, "authorization.scheme_unrecognised"),
+        ("Authorization", "NotBearer ", None, "authorization.scheme_invalid"),
+        ("Authorization", "Bearer ", "incorrect_token", "forbidden"),
+        ("Authorization", "Bearer ", "expired_token", "forbidden"),
     )
+
+    for key, value_beginning, token, expected_error_key in cases:
+        if token == "expired_token":
+            token_expired_at = utc_now() - timedelta(seconds=1)
+            token = None
+        else:
+            token_expired_at = utc_now() + timedelta(hours=1)
+
+        _, access_token = create_authorized_user(
+            security_service,
+            create_db_object,
+            token_expired_at=token_expired_at,
+        )
+        token = token or access_token
+
+        with client:
+            resp = client.post(
+                path,
+                headers={key: value_beginning + token}
+            )
+
+        assert resp.status_code == HTTPStatus.FORBIDDEN
+        assert resp.json()["errors"][0]["error_key"] == expected_error_key
