@@ -84,3 +84,22 @@ conflict_register_verify = {
         },
     },
 }
+
+
+forbidden = {
+    "model": ErrorResponse,
+    "description": "Error: Forbidden",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="forbidden",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}

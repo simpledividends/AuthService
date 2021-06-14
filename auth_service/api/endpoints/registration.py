@@ -21,7 +21,7 @@ from auth_service.db.exceptions import (
 )
 from auth_service.db.service import DBService
 from auth_service.mail.service import MailService
-from auth_service.models.token import VerificationRequest
+from auth_service.models.auth import VerificationRequest
 from auth_service.models.user import Newcomer, NewcomerRegistered, User
 from auth_service.security import SecurityService
 
@@ -47,8 +47,8 @@ async def make_registration_mail(
     status_code=HTTPStatus.CREATED,
     response_model=Newcomer,
     responses={
-        422: responses.unprocessable_entity_or_password_invalid,
         409: responses.conflict_register,
+        422: responses.unprocessable_entity_or_password_invalid,
     }
 )
 async def register(
@@ -90,8 +90,9 @@ async def register(
     status_code=HTTPStatus.OK,
     response_model=User,
     responses={
-        422: responses.unprocessable_entity,
+        403: responses.forbidden,
         409: responses.conflict_register_verify,
+        422: responses.unprocessable_entity,
     }
 )
 async def verify_registered_user(
