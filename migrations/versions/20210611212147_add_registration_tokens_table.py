@@ -11,8 +11,8 @@ from sqlalchemy import VARCHAR
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 
 # revision identifiers, used by Alembic.
-revision = 'c3522116d928'
-down_revision = '7a05b5faf3eb'
+revision = "c3522116d928"
+down_revision = "7a05b5faf3eb"
 branch_labels = None
 depends_on = None
 
