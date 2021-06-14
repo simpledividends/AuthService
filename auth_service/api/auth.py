@@ -18,10 +18,7 @@ auth_api_key_header = APIKeyHeader(
 )
 
 
-async def get_request_user(
-    request: Request,
-    header: tp.Optional[str] = Security(auth_api_key_header)
-) -> User:
+def extract_token_from_header(header: tp.Optional[str]) -> str:
     if not header:
         raise ForbiddenException(
             error_key="authorization.not_set",
@@ -41,6 +38,15 @@ async def get_request_user(
             error_key="authorization.scheme_invalid",
             error_message="Expected Bearer authorization scheme"
         )
+
+    return token
+
+
+async def get_request_user(
+    request: Request,
+    header: tp.Optional[str] = Security(auth_api_key_header)
+) -> User:
+    token = extract_token_from_header(header)
 
     security_service = get_security_service(request.app)
     hashed_token = security_service.hash_token_string(token)
