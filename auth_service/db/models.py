@@ -61,3 +61,18 @@ class SessionTable(Base):
     finished_at = Column(pg.TIMESTAMP, nullable=True)
 
     user = orm.relationship(UserTable)
+
+
+class AccessTokenTable(Base):
+    __tablename__ = "access_tokens"
+
+    token = Column(pg.VARCHAR(64), primary_key=True)
+    session_id = Column(
+        pg.UUID,
+        ForeignKey(SessionTable.session_id),
+        nullable=False,
+    )
+    created_at = Column(pg.TIMESTAMP, nullable=False)
+    expired_at = Column(pg.TIMESTAMP, nullable=False)
+
+    session = orm.relationship(SessionTable)
