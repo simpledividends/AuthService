@@ -34,7 +34,7 @@ class SecurityService(BaseModel):
         score = report["score"]
         return score
 
-    def is_password_valid(self, password: str) -> bool:
+    def is_password_proper(self, password: str) -> bool:
         strength = self.calc_password_strength(password)
         return strength >= self.min_password_strength
 

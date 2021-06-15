@@ -6,7 +6,7 @@ from starlette.background import BackgroundTasks
 from auth_service.api import responses
 from auth_service.api.exceptions import (
     ForbiddenException,
-    InvalidPasswordError,
+    ImproperPasswordError,
     UserConflictException,
 )
 from auth_service.api.services import (
@@ -48,7 +48,7 @@ async def make_registration_mail(
     response_model=Newcomer,
     responses={
         409: responses.conflict_register,
-        422: responses.unprocessable_entity_or_password_invalid,
+        422: responses.unprocessable_entity_or_password_improper,
     }
 )
 async def register(
@@ -57,8 +57,8 @@ async def register(
     background_tasks: BackgroundTasks,
 ) -> Newcomer:
     security_service = get_security_service(request.app)
-    if not security_service.is_password_valid(newcomer.password):
-        raise InvalidPasswordError()
+    if not security_service.is_password_proper(newcomer.password):
+        raise ImproperPasswordError()
 
     db_service = get_db_service(request.app)
     newcomer = newcomer.copy(
