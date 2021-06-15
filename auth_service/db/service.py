@@ -24,6 +24,7 @@ from auth_service.models.user import (
     Newcomer,
     NewcomerRegistered,
     User,
+    UserInfo,
     UserRole,
 )
 from auth_service.utils import utc_now
@@ -395,3 +396,19 @@ class DBService(BaseModel):
         if session_id is None:
             raise NotExists()
         return session_id
+
+    async def update_user(self, user_id: UUID, user_info: UserInfo) -> User:
+        query = """
+            UPDATE users
+            SET name = $1::VARCHAR
+            WHERE user_id = $2::UUID
+            RETURNING
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+        """
+        record = await self.pool.fetchrow(query, user_info.name, user_id)
+        return User(**record)
