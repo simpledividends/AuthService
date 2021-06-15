@@ -3,7 +3,7 @@ from pydantic.main import BaseModel
 from .common import Email
 
 
-class VerificationRequest(BaseModel):
+class TokenBody(BaseModel):
     token: str
 
 
