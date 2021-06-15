@@ -7,12 +7,11 @@ from starlette.middleware.base import (
 )
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
-
 from starlette.types import ASGIApp
 
-from auth_service import models
 from auth_service.context import REQUEST_ID
-from auth_service.log import app_logger, access_logger
+from auth_service.log import access_logger, app_logger
+from auth_service.models.common import Error
 from auth_service.response import server_error
 
 
@@ -74,7 +73,7 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
             app_logger.exception(
                 msg=f"Caught unhandled {e.__class__} exception: {e}"
             )
-            error = models.Error(
+            error = Error(
                 error_key="server_error",
                 error_message="Internal Server Error"
             )
