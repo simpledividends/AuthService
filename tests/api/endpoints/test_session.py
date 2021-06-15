@@ -1,6 +1,7 @@
 import typing as tp
 from datetime import timedelta
 from http import HTTPStatus
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import orm
@@ -20,11 +21,13 @@ from tests.helpers import (
     assert_all_tables_are_empty,
     create_authorized_user,
     make_db_user,
+    make_refresh_token,
 )
 from tests.utils import ApproxDatetime
 
 LOGIN_PATH = "/auth/login"
 LOGOUT_PATH = "/auth/logout"
+REFRESH_PATH = "/auth/refresh"
 
 
 def test_login_success(
@@ -163,7 +166,7 @@ def test_logout_only_current_user(
 
     assert_all_tables_are_empty(
         db_session,
-        [UserTable, SessionTable, AccessTokenTable, RefreshTokenTable]
+        [UserTable, SessionTable, AccessTokenTable]
     )
     assert len(db_session.query(UserTable).all()) == 2
     other_session = (
@@ -185,3 +188,78 @@ def test_logout_forbidden(
     access_forbidden_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
 ) -> None:
     access_forbidden_check({"method": "POST", "url": LOGOUT_PATH})
+
+
+def test_refresh_success(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    db_session: orm.Session,
+) -> None:
+    _ = create_authorized_user(
+        security_service,
+        create_db_object,
+    )
+
+    session_id = db_session.query(AccessTokenTable).first().session_id
+    token_string, token = security_service.make_access_token(uuid4())
+    token_db = make_refresh_token(token.token, session_id=session_id)
+    create_db_object(token_db)
+
+    with client:
+        resp = client.post(REFRESH_PATH, json={"token": token_string})
+
+    assert resp.status_code == HTTPStatus.OK
+    resp_json = resp.json()
+    assert set(resp_json.keys()) == {"access_token", "refresh_token"}
+
+    assert_all_tables_are_empty(
+        db_session,
+        [UserTable, SessionTable, AccessTokenTable, RefreshTokenTable]
+    )
+    assert len(db_session.query(UserTable).all()) == 1
+    assert len(db_session.query(SessionTable).all()) == 1
+    assert len(db_session.query(AccessTokenTable).all()) == 2
+    refresh_tokens = db_session.query(RefreshTokenTable).all()
+    assert len(refresh_tokens) == 1
+
+    hashed_new_refresh_token = security_service.hash_token_string(
+        resp_json["refresh_token"]
+    )
+    assert refresh_tokens[0].token == hashed_new_refresh_token
+
+
+def test_refresh_forbidden_when_not_exist(
+    client: TestClient,
+) -> None:
+
+    with client:
+        resp = client.post(REFRESH_PATH, json={"token": "some_token"})
+
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_refresh_forbidden_when_expired(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    db_session: orm.Session,
+) -> None:
+    _ = create_authorized_user(
+        security_service,
+        create_db_object,
+    )
+
+    session_id = db_session.query(AccessTokenTable).first().session_id
+    token_string, token = security_service.make_access_token(uuid4())
+    token_db = make_refresh_token(
+        token.token,
+        session_id=session_id,
+        expired_at=utc_now() - timedelta(seconds=1)
+    )
+    create_db_object(token_db)
+
+    with client:
+        resp = client.post(REFRESH_PATH, json={"token": token_string})
+
+    assert resp.status_code == HTTPStatus.FORBIDDEN
