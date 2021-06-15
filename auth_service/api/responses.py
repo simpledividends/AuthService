@@ -105,6 +105,49 @@ forbidden = {
 }
 
 
+forbidden_or_password_invalid = {
+    "model": ErrorResponse,
+    "description": "Error: Forbidden",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="forbidden",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                    Error(
+                        error_key="password.invalid",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}
+
+
+credentials_invalid = {
+    "model": ErrorResponse,
+    "description": "Error: Forbidden",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="credentials.invalid",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}
+
+
 not_found = {
     "model": ErrorResponse,
     "description": "Error: Not found",

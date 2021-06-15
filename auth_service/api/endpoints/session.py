@@ -42,7 +42,7 @@ async def _create_token_pair(
     status_code=HTTPStatus.OK,
     response_model=TokenPair,
     responses={
-        403: responses.forbidden,
+        403: responses.credentials_invalid,
         422: responses.unprocessable_entity,
     }
 )
