@@ -12,6 +12,7 @@ from auth_service.security import SecurityService
 from tests.helpers import DBObjectCreator, create_authorized_user, make_db_user
 
 ME_PATH = "/auth/users/me"
+MY_PASSWORD = "/auth/users/me/password"
 USER_PATH_TEMPLATE = "/auth/users/{user_id}"
 
 
@@ -110,6 +111,87 @@ def test_patch_me_forbidden(
     access_forbidden_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
 ) -> None:
     access_forbidden_check({"method": "PATCH", "url": ME_PATH})
+
+
+def test_patch_my_password_success(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    db_session: orm.Session
+) -> None:
+    password = "old_password"
+    new_password = "Very$tr0ng!"
+    _, access_token = create_authorized_user(
+        security_service,
+        create_db_object,
+        hashed_password=security_service.hash_password(password),
+    )
+    with client:
+        resp = client.patch(
+            MY_PASSWORD,
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"password": password, "new_password": new_password},
+        )
+
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.json() == {}
+
+    users = db_session.query(UserTable).all()
+    assert len(users) == 1
+    assert security_service.is_password_correct(
+        new_password,
+        users[0].password,
+    )
+
+
+def test_patch_my_password_forbidden(
+    access_forbidden_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
+) -> None:
+    access_forbidden_check({"method": "PATCH", "url": MY_PASSWORD})
+
+
+def test_patch_my_password_with_invalid_old_password(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    _, access_token = create_authorized_user(
+        security_service,
+        create_db_object,
+        hashed_password=security_service.hash_password("pass"),
+    )
+    with client:
+        resp = client.patch(
+            MY_PASSWORD,
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"password": "invalid", "new_password": "Very$tr0ng!"},
+        )
+
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+    assert resp.json()["errors"][0]["error_key"] == "password.invalid"
+
+
+def test_patch_my_password_with_weak_new_password(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    _, access_token = create_authorized_user(
+        security_service,
+        create_db_object,
+    )
+    with client:
+        resp = client.patch(
+            MY_PASSWORD,
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"password": "pass", "new_password": "weak"},
+        )
+
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert (
+        resp.json()["errors"][0]["error_key"]
+        == "value_error.password.improper"
+    )
 
 
 def test_get_user_success(

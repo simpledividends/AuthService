@@ -164,8 +164,9 @@ def create_authorized_user(
     create_db_object: DBObjectCreator,
     user_role: UserRole = UserRole.user,
     token_expired_at: tp.Optional[datetime] = None,
+    hashed_password: str = "hashed_password"
 ) -> tp.Tuple[UUID, str]:
-    user = make_db_user(role=user_role)
+    user = make_db_user(role=user_role, password=hashed_password)
     session = make_db_session(user_id=user.user_id)
     token_string, token = security_service.make_access_token(uuid4())
     token_db = make_access_token(
