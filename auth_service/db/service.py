@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from auth_service.db.exceptions import (
     NotExists,
+    PasswordInvalid,
     TokenNotFound,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
@@ -412,3 +413,44 @@ class DBService(BaseModel):
         """
         record = await self.pool.fetchrow(query, user_info.name, user_id)
         return User(**record)
+
+    async def update_password_if_old_is_valid(
+        self,
+        user_id: UUID,
+        new_password: str,
+        is_old_password_valid: tp.Callable[[str], bool],
+    ) -> None:
+        func = partial(
+            self._update_password_if_old_is_valid,
+            user_id=user_id,
+            new_password=new_password,
+            is_old_password_valid=is_old_password_valid,
+        )
+        await self.execute_serializable_transaction(func)
+
+    @staticmethod
+    async def _update_password_if_old_is_valid(
+        conn: Connection,
+        user_id: UUID,
+        new_password: str,
+        is_old_password_valid: tp.Callable[[str], bool],
+    ) -> None:
+        get_query = """
+            SELECT password
+            FROM users
+            WHERE user_id = $1::UUID
+        """
+        password = await conn.fetchval(get_query, user_id)
+
+        if password is None:
+            raise UserNotExists()
+
+        if not is_old_password_valid(password):
+            raise PasswordInvalid()
+
+        update_query = """
+            UPDATE users
+            SET password = $1::VARCHAR
+            WHERE user_id = $2::UUID
+        """
+        await conn.fetchval(update_query, new_password, user_id)
