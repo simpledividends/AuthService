@@ -12,6 +12,7 @@ from starlette.testclient import TestClient
 from auth_service.db.models import (
     AccessTokenTable,
     Base,
+    EmailTokenTable,
     NewcomerTable,
     RefreshTokenTable,
     RegistrationTokenTable,
@@ -104,7 +105,7 @@ def make_db_newcomer(
 
 
 def make_db_registration_token(
-    token: str,
+    token: str = "hashed_token",
     user_id: tp.Optional[UUID] = None,
     created_at: datetime = datetime(2021, 6, 12),
     expired_at: tp.Optional[datetime] = None,
@@ -112,6 +113,22 @@ def make_db_registration_token(
     return RegistrationTokenTable(
         token=token,
         user_id=str(user_id or uuid4()),
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_email_token(
+    token: str = "hashed_token",
+    user_id: tp.Optional[UUID] = None,
+    email: str = "some@mail.ru",
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> EmailTokenTable:
+    return EmailTokenTable(
+        token=token,
+        user_id=str(user_id or uuid4()),
+        email=email,
         created_at=created_at,
         expired_at=expired_at or utc_now() + timedelta(days=10),
     )
