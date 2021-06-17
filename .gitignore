@@ -85,3 +85,5 @@ dmypy.json
 
 .reports/
 .build/
+
+*.env
