@@ -1,5 +1,6 @@
 import asyncio
 import typing as tp
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import orm
@@ -11,8 +12,10 @@ from auth_service.db.exceptions import (
 )
 from auth_service.db.models import NewcomerTable, UserTable
 from auth_service.db.service import DBService
-from auth_service.models.user import NewcomerRegistered
+from auth_service.models.user import NewcomerFull
+from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig
+from auth_service.utils import utc_now
 from tests.helpers import (
     DBObjectCreator,
     make_db_newcomer,
@@ -26,12 +29,31 @@ async def test_registration_when_newcomers_exist_with_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
     db_session: orm.Session,
+    security_service: SecurityService,
 ) -> None:
-    newcomer = NewcomerRegistered(name="ada", email="a@b.c", password="pass")
-    max_same_newcomers = service_config.max_newcomers_with_same_email
-    tasks = [
-        db_service.create_newcomer(newcomer)
+    max_same_newcomers = (
+        service_config
+        .db_config
+        .max_active_newcomers_with_same_email
+    )
+    newcomers = [
+        NewcomerFull(
+            name="ada",
+            email="a@b.c",
+            hashed_password="pass",
+            user_id=uuid4(),
+            created_at=utc_now()
+        )
         for _ in range(max_same_newcomers * 3)
+    ]
+    tokens = [
+        security_service.make_registration_token(newcomer.user_id)[1]
+        for newcomer in newcomers
+    ]
+
+    tasks = [
+        db_service.create_newcomer(newcomer, token)
+        for newcomer, token in zip(newcomers, tokens)
     ]
 
     await db_service.setup()

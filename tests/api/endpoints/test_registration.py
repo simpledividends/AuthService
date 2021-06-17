@@ -288,7 +288,7 @@ def test_register_verify_success(
         [UserTable, NewcomerTable, RegistrationTokenTable],
     )
     assert len(db_session.query(NewcomerTable).all()) == 1
-    assert len(db_session.query(RegistrationTokenTable).all()) == 1
+    assert len(db_session.query(RegistrationTokenTable).all()) == 0
     users = db_session.query(UserTable).all()
     assert len(users) == 1
     user = users[0]
