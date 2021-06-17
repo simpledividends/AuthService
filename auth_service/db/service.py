@@ -205,6 +205,8 @@ class DBService(BaseModel):
         if n_users > 0:
             raise UserAlreadyExists()
 
+        await self._drop_register_token(conn, token)
+
         query = """
             INSERT INTO users
                 (user_id, name, email, password, created_at, verified_at, role)
@@ -252,6 +254,14 @@ class DBService(BaseModel):
         """
         record = await conn.fetchrow(query, token, utc_now())
         return record
+
+    @staticmethod
+    async def _drop_register_token(conn: Connection, token: str) -> None:
+        query = """
+            DELETE FROM registration_tokens
+            WHERE token = $1::VARCHAR
+        """
+        await conn.execute(query, token)
 
     async def get_user_with_password(self, email: str) -> tp.Tuple[UUID, str]:
         query = """
