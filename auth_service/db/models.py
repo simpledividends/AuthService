@@ -91,3 +91,19 @@ class RefreshTokenTable(Base):
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
     session = orm.relationship(SessionTable)
+
+
+class EmailTokenTable(Base):
+    __tablename__ = "email_tokens"
+
+    token = Column(pg.VARCHAR(64), primary_key=True)
+    user_id = Column(
+        pg.UUID,
+        ForeignKey(UserTable.user_id),
+        nullable=False,
+    )
+    email = Column(pg.VARCHAR(128), nullable=False)
+    created_at = Column(pg.TIMESTAMP, nullable=False)
+    expired_at = Column(pg.TIMESTAMP, nullable=False)
+
+    user = orm.relationship(UserTable)
