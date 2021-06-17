@@ -32,6 +32,10 @@ class Newcomer(NewcomerBase):
     created_at: datetime
 
 
+class NewcomerFull(Newcomer):
+    hashed_password: str
+
+
 class UserInfo(NewcomerInfo):
     pass
 

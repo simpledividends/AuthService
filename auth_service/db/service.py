@@ -73,24 +73,37 @@ class DBService(BaseModel):
                     break
         return result
 
-    async def create_newcomer(self, newcomer: NewcomerRegistered) -> Newcomer:
-        func = partial(self._create_newcomer, newcomer=newcomer)
+    async def create_newcomer(
+        self,
+        newcomer: NewcomerFull,
+        token: RegistrationToken,
+    ) -> Newcomer:
+        func = partial(self._create_newcomer, newcomer=newcomer, token=token)
         created = await self.execute_serializable_transaction(func)
         return created
 
     async def _create_newcomer(
         self,
         conn: Connection,
-        newcomer: NewcomerRegistered,
+        newcomer: NewcomerFull,
+        token: RegistrationToken,
     ) -> Newcomer:
-        email = newcomer.email
+        await self._check_email_available(conn, newcomer.email)
+        created = await self._insert_newcomer(conn, newcomer)
+        await self._add_registration_token(conn, token)
+        return created
 
+    async def _check_email_available(
+        self,
+        conn: Connection,
+        email: str,
+    ) -> None:
         n_users = await self._count_users_by_email(conn, email)
         if n_users > 0:
             raise UserAlreadyExists()
 
-        n_newcomers = await self._count_newcomers_by_email(conn, email)
-        if n_newcomers >= self.max_newcomers_with_same_email:
+        n_newcomers = await self._count_active_newcomers_by_email(conn, email)
+        if n_newcomers >= self.max_active_newcomers_with_same_email:
             raise TooManyNewcomersWithSameEmail()
 
         created = await self._insert_newcomer(conn, newcomer)
@@ -123,7 +136,7 @@ class DBService(BaseModel):
     @staticmethod
     async def _insert_newcomer(
         conn: Connection,
-        newcomer: NewcomerRegistered,
+        newcomer: NewcomerFull,
     ) -> Newcomer:
         query = """
             INSERT INTO newcomers
@@ -145,15 +158,19 @@ class DBService(BaseModel):
         """
         record = await conn.fetchrow(
             query,
-            uuid4(),
+            newcomer.user_id,
             newcomer.name,
             newcomer.email,
-            newcomer.password,
-            utc_now(),
+            newcomer.hashed_password,
+            newcomer.created_at,
         )
         return Newcomer(**record)
 
-    async def save_registration_token(self, token: RegistrationToken) -> None:
+    @staticmethod
+    async def _add_registration_token(
+        conn: Connection,
+        token: RegistrationToken,
+    ) -> None:
         query = """
             INSERT INTO registration_tokens
                 (token, user_id, created_at, expired_at)
@@ -166,7 +183,7 @@ class DBService(BaseModel):
                 )
             ;
         """
-        await self.pool.execute(
+        await conn.execute(
             query,
             token.token,
             token.user_id,
