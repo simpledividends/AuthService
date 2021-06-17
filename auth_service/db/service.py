@@ -23,7 +23,7 @@ from auth_service.models.token import (
 )
 from auth_service.models.user import (
     Newcomer,
-    NewcomerRegistered,
+    NewcomerFull,
     User,
     UserInfo,
     UserRole,
@@ -35,7 +35,7 @@ T = tp.TypeVar("T")
 
 class DBService(BaseModel):
     pool: Pool
-    max_newcomers_with_same_email: int
+    max_active_newcomers_with_same_email: int
     n_transaction_retries: int
     transaction_retry_interval_first: float
     transaction_retry_interval_factor: float
@@ -107,13 +107,17 @@ class DBService(BaseModel):
         return n_users
 
     @staticmethod
-    async def _count_newcomers_by_email(conn: Connection, email: str) -> int:
+    async def _count_active_newcomers_by_email(
+        conn: Connection,
+        email: str,
+    ) -> int:
         query = """
-                SELECT count(*)
-                FROM newcomers
-                WHERE email = $1::VARCHAR;
-            """
-        n_newcomers = await conn.fetchval(query, email)
+            SELECT count(*)
+            FROM newcomers
+                JOIN registration_tokens rt on newcomers.user_id = rt.user_id
+            WHERE email = $1::VARCHAR AND rt.expired_at > $2::TIMESTAMP;
+        """
+        n_newcomers = await conn.fetchval(query, email, utc_now())
         return n_newcomers
 
     @staticmethod
