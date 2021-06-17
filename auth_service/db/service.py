@@ -11,6 +11,7 @@ from auth_service.db.exceptions import (
     NotExists,
     PasswordInvalid,
     TokenNotFound,
+    TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
     UserNotExists,
@@ -18,6 +19,7 @@ from auth_service.db.exceptions import (
 from auth_service.log import app_logger
 from auth_service.models.token import (
     AccessToken,
+    ChangeEmailToken,
     RefreshToken,
     RegistrationToken,
 )
@@ -36,6 +38,7 @@ T = tp.TypeVar("T")
 class DBService(BaseModel):
     pool: Pool
     max_active_newcomers_with_same_email: int
+    max_active_requests_change_same_email: int
     n_transaction_retries: int
     transaction_retry_interval_first: float
     transaction_retry_interval_factor: float
@@ -106,8 +109,9 @@ class DBService(BaseModel):
         if n_newcomers >= self.max_active_newcomers_with_same_email:
             raise TooManyNewcomersWithSameEmail()
 
-        created = await self._insert_newcomer(conn, newcomer)
-        return created
+        n_email_changes = await self._count_email_changes(conn, email)
+        if n_email_changes >= self.max_active_requests_change_same_email:
+            raise TooManyChangeSameEmailRequests()
 
     @staticmethod
     async def _count_users_by_email(conn: Connection, email: str) -> int:
@@ -132,6 +136,16 @@ class DBService(BaseModel):
         """
         n_newcomers = await conn.fetchval(query, email, utc_now())
         return n_newcomers
+
+    @staticmethod
+    async def _count_email_changes(conn: Connection, email: str) -> int:
+        query = """
+            SELECT count(*)
+            FROM email_tokens
+            WHERE email = $1::VARCHAR AND expired_at > $2::TIMESTAMP;
+        """
+        n_changes = await conn.fetchval(query, email, utc_now())
+        return n_changes
 
     @staticmethod
     async def _insert_newcomer(
