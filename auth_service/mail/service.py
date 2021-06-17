@@ -10,17 +10,17 @@ from pydantic import BaseModel, HttpUrl
 
 from auth_service.models.user import Newcomer, User
 
+from ..models.common import Email
 from .config import (
-    REGISTRATION_EMAIL_SENDER,
-    REGISTRATION_EMAIL_SUBJECT,
-    REGISTRATION_EMAIL_TEXT_TEMPLATE,
-    REGISTRATION_MAIL_HTML,
     CHANGE_EMAIL_HTML,
     CHANGE_EMAIL_SENDER,
     CHANGE_EMAIL_SUBJECT,
     CHANGE_EMAIL_TEXT_TEMPLATE,
+    REGISTRATION_EMAIL_SENDER,
+    REGISTRATION_EMAIL_SUBJECT,
+    REGISTRATION_EMAIL_TEXT_TEMPLATE,
+    REGISTRATION_MAIL_HTML,
 )
-from ..models.common import Email
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
 

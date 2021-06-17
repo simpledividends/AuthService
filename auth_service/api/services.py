@@ -26,11 +26,7 @@ def make_db_service(config: ServiceConfig) -> DBService:
     pool_config = db_config.pop("db_pool_config")
     pool_config["dsn"] = pool_config.pop("db_url")
     pool = create_pool(**pool_config)
-    service = DBService(
-        pool=pool,
-        max_newcomers_with_same_email=config.max_newcomers_with_same_email,
-        **db_config,
-    )
+    service = DBService(pool=pool, **db_config)
     return service
 
 

@@ -43,6 +43,9 @@ class DBPoolConfig(Config):
 
 
 class DBConfig(Config):
+    max_active_newcomers_with_same_email: int = 3
+    max_active_requests_change_same_email: int = 2
+
     n_transaction_retries: int = 10
     transaction_retry_interval_first: float = 0.01
     transaction_retry_interval_factor: float = 2
@@ -68,7 +71,6 @@ class MailConfig(Config):
 class ServiceConfig(Config):
     service_name: str = "auth_service"
     request_id_header: str = "X-Request-Id"
-    max_newcomers_with_same_email: int = 3
 
     log_config: LogConfig
     security_config: SecurityConfig
