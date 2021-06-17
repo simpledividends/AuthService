@@ -43,7 +43,7 @@ unprocessable_entity_or_password_improper = {
 }
 
 
-conflict_register = {
+conflict_or_email_exists = {
     "model": ErrorResponse,
     "description": "Error: Conflict when register new user",
     "content": {

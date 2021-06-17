@@ -45,6 +45,11 @@ class User(Newcomer):
     role: UserRole
 
 
-class PasswordPair(BaseModel):
+class ChangePasswordRequest(BaseModel):
     password: str
     new_password: str
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: Email
+    password: str

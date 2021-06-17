@@ -499,3 +499,36 @@ class DBService(BaseModel):
             WHERE user_id = $2::UUID
         """
         await conn.fetchval(update_query, new_password, user_id)
+
+    async def add_change_email_token(self, token: ChangeEmailToken) -> None:
+        func = partial(self._add_change_email_token, token=token)
+        await self.execute_serializable_transaction(func)
+
+    async def _add_change_email_token(
+        self,
+        conn: Connection,
+        token: ChangeEmailToken,
+    ) -> None:
+        await self._check_email_available(conn, token.email)
+
+        query = """
+            INSERT INTO email_tokens
+                (token, user_id, email, created_at, expired_at)
+            VALUES
+                (
+                    $1::VARCHAR
+                    , $2::UUID
+                    , $3::VARCHAR
+                    , $4::TIMESTAMP
+                    , $5::TIMESTAMP
+                )
+            ;
+        """
+        await conn.execute(
+            query,
+            token.token,
+            token.user_id,
+            token.email,
+            token.created_at,
+            token.expired_at,
+        )
