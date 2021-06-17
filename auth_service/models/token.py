@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from .common import Email
+
 
 class Token(BaseModel):
     token: str
@@ -10,13 +12,25 @@ class Token(BaseModel):
     expired_at: datetime
 
 
-class RegistrationToken(Token):
+class UserToken(Token):
     user_id: UUID
 
 
-class AccessToken(Token):
+class SessionToken(Token):
     session_id: UUID
 
 
-class RefreshToken(Token):
-    session_id: UUID
+class RegistrationToken(UserToken):
+    pass
+
+
+class ChangeEmailToken(UserToken):
+    email: Email
+
+
+class AccessToken(SessionToken):
+    pass
+
+
+class RefreshToken(SessionToken):
+    pass

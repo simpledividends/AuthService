@@ -8,8 +8,10 @@ from passlib import hash as phash
 from pydantic.main import BaseModel
 from zxcvbn import zxcvbn
 
+from auth_service.models.common import Email
 from auth_service.models.token import (
     AccessToken,
+    ChangeEmailToken,
     RefreshToken,
     RegistrationToken,
     Token,
@@ -25,6 +27,7 @@ class SecurityService(BaseModel):
     password_hash_rounds: int
     password_salt_size: int
     registration_token_lifetime: timedelta
+    change_email_token_lifetime: timedelta
     access_token_lifetime: timedelta
     refresh_token_lifetime: timedelta
 
@@ -80,6 +83,19 @@ class SecurityService(BaseModel):
         token_string, token = self.make_token(self.registration_token_lifetime)
         registration_token = RegistrationToken(**token.dict(), user_id=user_id)
         return token_string, registration_token
+
+    def make_change_email_token(
+        self,
+        user_id: UUID,
+        email: Email,
+    ) -> tp.Tuple[str, ChangeEmailToken]:
+        token_string, token = self.make_token(self.change_email_token_lifetime)
+        change_email_token = ChangeEmailToken(
+            **token.dict(),
+            user_id=user_id,
+            email=email,
+        )
+        return token_string, change_email_token
 
     def make_access_token(
         self,
