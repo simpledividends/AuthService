@@ -245,9 +245,9 @@ class DBService(BaseModel):
         token: str,
     ) -> tp.Optional[Record]:
         query = """
-            SELECT *
-            FROM newcomers
-                JOIN registration_tokens rt on newcomers.user_id = rt.user_id
+            SELECT n.*
+            FROM newcomers n
+                JOIN registration_tokens rt on n.user_id = rt.user_id
             WHERE token = $1::VARCHAR and expired_at > $2::TIMESTAMP
         """
         record = await conn.fetchrow(query, token, utc_now())
