@@ -33,7 +33,14 @@ def upgrade():
             ondelete="CASCADE",
         ),
     )
+    op.create_index(
+        op.f("ix_email_tokens_email"),
+        "email_tokens",
+        ["email"],
+        unique=False,
+    )
 
 
 def downgrade():
+    op.drop_index(op.f("ix_email_tokens_email"), table_name="email_tokens")
     op.drop_table("email_tokens")

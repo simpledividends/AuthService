@@ -32,7 +32,7 @@ def upgrade():
         op.f("ix_newcomers_email"),
         "newcomers",
         ["email"],
-        unique=False
+        unique=False,
     )
 
 

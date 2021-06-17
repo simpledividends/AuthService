@@ -102,7 +102,7 @@ class EmailTokenTable(Base):
         ForeignKey(UserTable.user_id),
         nullable=False,
     )
-    email = Column(pg.VARCHAR(128), nullable=False)
+    email = Column(pg.VARCHAR(128), index=True, nullable=False)
     created_at = Column(pg.TIMESTAMP, nullable=False)
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
