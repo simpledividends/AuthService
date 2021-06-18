@@ -182,7 +182,7 @@ def create_authorized_user(
     user_role: UserRole = UserRole.user,
     token_expired_at: tp.Optional[datetime] = None,
     hashed_password: str = "hashed_password"
-) -> tp.Tuple[UUID, str]:
+) -> tp.Tuple[UserTable, str]:
     user = make_db_user(role=user_role, password=hashed_password)
     session = make_db_session(user_id=user.user_id)
     token_string, token = security_service.make_access_token(uuid4())
@@ -194,7 +194,7 @@ def create_authorized_user(
     for obj in (user, session, token_db):
         create_db_object(obj)
 
-    return user.user_id, token_string
+    return user, token_string
 
 
 def check_access_forbidden(
