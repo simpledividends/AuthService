@@ -7,11 +7,13 @@ from sqlalchemy import orm
 
 from auth_service.db.exceptions import (
     PasswordInvalid,
+    TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
 )
-from auth_service.db.models import NewcomerTable, UserTable
+from auth_service.db.models import EmailTokenTable, NewcomerTable, UserTable
 from auth_service.db.service import DBService
+from auth_service.models.common import Email
 from auth_service.models.user import NewcomerFull
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig
@@ -30,7 +32,9 @@ async def test_registration_when_newcomers_exist_with_parallel_requests(
     db_service: DBService,
     db_session: orm.Session,
     security_service: SecurityService,
+    create_db_object: DBObjectCreator,
 ) -> None:
+    email = Email("a@b.c")
     max_same_newcomers = (
         service_config
         .db_config
@@ -39,21 +43,21 @@ async def test_registration_when_newcomers_exist_with_parallel_requests(
     newcomers = [
         NewcomerFull(
             name="ada",
-            email="a@b.c",
+            email=email,
             hashed_password="pass",
             user_id=uuid4(),
             created_at=utc_now()
         )
         for _ in range(max_same_newcomers * 3)
     ]
-    tokens = [
+    registration_tokens = [
         security_service.make_registration_token(newcomer.user_id)[1]
         for newcomer in newcomers
     ]
 
     tasks = [
         db_service.create_newcomer(newcomer, token)
-        for newcomer, token in zip(newcomers, tokens)
+        for newcomer, token in zip(newcomers, registration_tokens)
     ]
 
     await db_service.setup()
@@ -140,3 +144,41 @@ async def test_update_passwords_with_parallel_requests(
         await db_service.cleanup()
 
     assert sum(execution_statuses) == 1
+
+
+@pytest.mark.asyncio
+async def test_many_change_same_email_parallel_requests(
+    service_config: ServiceConfig,
+    db_service: DBService,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    email = Email("a@b.c")
+
+    max_email_changes = (
+        service_config
+        .db_config
+        .max_active_requests_change_same_email
+    )
+    users = [make_db_user() for _ in range(max_email_changes * 3)]
+    for user in users:
+        create_db_object(user)
+    change_email_tokens = [
+        security_service.make_change_email_token(user.user_id, email)[1]
+        for user in users
+    ]
+    tasks = [
+        db_service.add_change_email_token(token)
+        for token in change_email_tokens
+    ]
+
+    await db_service.setup()
+    try:
+        await asyncio.gather(*tasks)
+    except TooManyChangeSameEmailRequests:
+        pass
+    finally:
+        await db_service.cleanup()
+
+    assert len(db_session.query(EmailTokenTable).all()) == max_email_changes
