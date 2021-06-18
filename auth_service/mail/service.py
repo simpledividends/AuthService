@@ -40,8 +40,8 @@ class MailService(BaseModel):
 
     async def send_mail(
         self,
-        from_user,
-        email: str,
+        from_user: str,
+        email: Email,
         subject: str,
         text: str,
         html: str,
@@ -86,7 +86,7 @@ class MailService(BaseModel):
             autoescape=True,
         )
         template = jinja_env.get_template(CHANGE_EMAIL_HTML)
-        link = self.register_verify_link_template.format(token=token)
+        link = self.change_email_link_template.format(token=token)
         context = {
             "user": user,
             "link": link,
@@ -119,7 +119,7 @@ class MailgunMailService(MailService):
 
     async def send_mail(
         self,
-        from_user,
+        from_user: str,
         email: Email,
         subject: str,
         text: str,
