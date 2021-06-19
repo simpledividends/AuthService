@@ -122,4 +122,3 @@ class PasswordTokenTable(Base):
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
     user = orm.relationship(UserTable)
-

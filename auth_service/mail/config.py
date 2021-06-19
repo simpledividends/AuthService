@@ -14,9 +14,11 @@ CHANGE_EMAIL_TEXT_TEMPLATE = """
 """
 CHANGE_EMAIL_HTML = "change_email.html"
 
-RESET_PASSWORD_SUBJECT = "Сброс пароля"
-RESET_PASSWORD_SENDER = "noreply@{domain}"
-RESET_PASSWORD_TEXT_TEMPLATE = """
-Ссылка для Сброса пароля: {link}
-"""
-RESET_PASSWORD_HTML = "reset_password.html"
+RESET_PASSWORD_SUBJECT = "Сброс пароля"  # nosec
+RESET_PASSWORD_SENDER = "noreply@{domain}"  # nosec
+RESET_PASSWORD_TEXT_TEMPLATE = (   # nosec
+    """
+        Ссылка для Сброса пароля: {link}
+    """
+)
+RESET_PASSWORD_HTML = "reset_password.html"  # nosec
