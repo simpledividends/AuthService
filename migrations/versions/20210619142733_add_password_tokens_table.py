@@ -5,8 +5,8 @@ Revises: 57e71c68b430
 Create Date: 2021-06-19 14:27:33.171572
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import VARCHAR
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 

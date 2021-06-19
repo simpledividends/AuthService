@@ -12,9 +12,10 @@ from auth_service.models.common import Email
 from auth_service.models.token import (
     AccessToken,
     ChangeEmailToken,
+    PasswordToken,
     RefreshToken,
     RegistrationToken,
-    Token, PasswordToken,
+    Token,
 )
 from auth_service.utils import utc_now
 

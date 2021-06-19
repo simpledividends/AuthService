@@ -35,7 +35,7 @@ def make_security_service(config: ServiceConfig) -> SecurityService:
     for token_type in (
         "registration",
         "change_email",
-        "password", 
+        "password",
         "access",
         "refresh",
     ):
