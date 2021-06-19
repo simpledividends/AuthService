@@ -191,6 +191,9 @@ async def verify_email_change(
     path="/auth/password/forgot",
     tags=["User"],
     status_code=HTTPStatus.ACCEPTED,
+    responses={
+        422: responses.unprocessable_entity,
+    }
 )
 async def forgot_password(
     request: Request,

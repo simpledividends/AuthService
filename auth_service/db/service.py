@@ -599,7 +599,7 @@ class DBService(BaseModel):
         return User(**record)
 
     async def create_password_token(self, token: PasswordToken) -> None:
-        func = partial(self._verify_email, token=token)
+        func = partial(self._create_password_token, token=token)
         user = await self.execute_serializable_transaction(func)
         return user
 
@@ -617,7 +617,7 @@ class DBService(BaseModel):
             raise UserNotExists()
 
         n_tokens = await self._count_password_tokens(conn, token.user_id)
-        if n_tokens > self.max_active_user_password_tokens:
+        if n_tokens >= self.max_active_user_password_tokens:
             raise TooManyPasswordTokens()
 
         query = """
@@ -627,8 +627,8 @@ class DBService(BaseModel):
                 (
                     $1::VARCHAR
                     , $2::UUID
+                    , $3::TIMESTAMP
                     , $4::TIMESTAMP
-                    , $5::TIMESTAMP
                 )
             ;
         """
@@ -639,8 +639,6 @@ class DBService(BaseModel):
             token.created_at,
             token.expired_at,
         )
-
-
 
     @staticmethod
     async def _count_password_tokens(conn: Connection, user_id: UUID) -> int:
