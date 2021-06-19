@@ -1,6 +1,6 @@
 import re
 import typing as tp
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http import HTTPStatus
 from uuid import uuid4
 
@@ -35,6 +35,7 @@ from tests.utils import ApproxDatetime
 ME_PATH = "/auth/users/me"
 MY_PASSWORD = "/auth/users/me/password"
 MY_EMAIL = "/auth/users/me/email"
+VERIFY_EMAIL_PATH = "/auth/email/verify"
 USER_PATH_TEMPLATE = "/auth/users/{user_id}"
 
 
@@ -465,6 +466,90 @@ def test_patch_my_email_when_requests_for_email_change_exist(
 
     assert len(db_session.query(EmailTokenTable).all()) == max_email_requests
     assert len(fake_mailgun_server.requests) == 0
+
+
+def test_change_email_verify_success(
+    client: TestClient,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    email = "new@e.mail"
+    user = make_db_user()
+    token_string = "abracadabra"
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_email_token(token_hashed, user_id=user.user_id, email=email)
+    create_db_object(user)
+    create_db_object(token)
+
+    with client:
+        resp = client.post(
+            VERIFY_EMAIL_PATH,
+            json={"token": token_string},
+        )
+    assert resp.status_code == HTTPStatus.OK
+
+    assert_all_tables_are_empty(db_session, [UserTable])
+    users = db_session.query(UserTable).all()
+    assert len(users) == 1
+    assert users[0].email == email
+
+
+@pytest.mark.parametrize(
+    "token_string,expired_at",
+    (
+        ("other_token", utc_now() + timedelta(days=10)),
+        ("my_token", utc_now() - timedelta(days=10)),
+    )
+)
+def test_register_verify_incorrect_token(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    token_string: str,
+    expired_at: datetime,
+) -> None:
+    user = make_db_user()
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_email_token(
+        token_hashed,
+        user_id=user.user_id,
+        expired_at=expired_at,
+    )
+    create_db_object(user)
+    create_db_object(token)
+
+    with client:
+        resp = client.post(
+            VERIFY_EMAIL_PATH,
+            json={"token": "my_token"},
+        )
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_register_verify_user_already_exists(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    email = "new@e.mail"
+    user = make_db_user()
+    token_string = "abracadabra"
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_email_token(token_hashed, user_id=user.user_id, email=email)
+    create_db_object(user)
+    create_db_object(token)
+
+    other_user = make_db_user(email=email)
+    create_db_object(other_user)
+
+    with client:
+        resp = client.post(
+            VERIFY_EMAIL_PATH,
+            json={"token": token_string},
+        )
+    assert resp.status_code == HTTPStatus.CONFLICT
+    assert resp.json()["errors"][0]["error_key"] == "email.already_exists"
 
 
 def test_get_user_success(

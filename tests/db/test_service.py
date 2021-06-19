@@ -23,10 +23,25 @@ from tests.helpers import (
     make_db_newcomer,
     make_db_registration_token,
     make_db_user,
+    make_email_token,
 )
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+ExcT = tp.TypeVar("ExcT", bound=Exception)
+
+
+async def is_func_executed(
+    func: tp.Awaitable[tp.Any],
+    exc_cls: tp.Type[ExcT],
+) -> bool:
+    try:
+        await func
+    except exc_cls:
+        return False
+    return True
+
+
 async def test_registration_when_newcomers_exist_with_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
@@ -71,7 +86,6 @@ async def test_registration_when_newcomers_exist_with_parallel_requests(
     assert len(db_session.query(NewcomerTable).all()) == max_same_newcomers
 
 
-@pytest.mark.asyncio
 async def test_verification_when_users_exist_with_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
@@ -103,7 +117,6 @@ async def test_verification_when_users_exist_with_parallel_requests(
     assert len(db_session.query(UserTable).all()) == 1
 
 
-@pytest.mark.asyncio
 async def test_update_passwords_with_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
@@ -119,20 +132,14 @@ async def test_update_passwords_with_parallel_requests(
     def is_password_valid(password: str) -> bool:
         return password == user.password
 
-    async def is_func_executed(func: tp.Awaitable[tp.Any]) -> bool:
-        try:
-            await func
-        except PasswordInvalid:
-            return False
-        return True
-
     tasks = [
         is_func_executed(
             db_service.update_password_if_old_is_valid(
                 user_id=user.user_id,
                 new_password=new_password,
                 is_old_password_valid=is_password_valid,
-            )
+            ),
+            PasswordInvalid,
         )
         for new_password in new_passwords
     ]
@@ -146,7 +153,6 @@ async def test_update_passwords_with_parallel_requests(
     assert sum(execution_statuses) == 1
 
 
-@pytest.mark.asyncio
 async def test_many_change_same_email_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
@@ -182,3 +188,36 @@ async def test_many_change_same_email_parallel_requests(
         await db_service.cleanup()
 
     assert len(db_session.query(EmailTokenTable).all()) == max_email_changes
+
+
+async def test_verify_same_email_with_parallel_requests(
+    service_config: ServiceConfig,
+    db_service: DBService,
+    db_session: orm.Session,
+    create_db_object: DBObjectCreator
+) -> None:
+    n = 10
+
+    email = "new@email.ru"
+    token_hashes = [f"token_{i}_hash" for i in range(n)]
+    for hashed in token_hashes:
+        user = make_db_user()
+        token = make_email_token(hashed, user_id=user.user_id, email=email)
+        create_db_object(user)
+        create_db_object(token)
+
+    tasks = [
+        is_func_executed(
+            db_service.verify_email(token_hash),
+            UserAlreadyExists,
+        )
+        for token_hash in token_hashes
+    ]
+
+    await db_service.setup()
+    try:
+        results = await asyncio.gather(*tasks)
+    finally:
+        await db_service.cleanup()
+
+    assert sum(results) == 1
