@@ -7,6 +7,10 @@ class TokenBody(BaseModel):
     token: str
 
 
+class TokenPasswordBody(TokenBody):
+    password: str
+
+
 class EmailBody(BaseModel):
     email: Email
 
