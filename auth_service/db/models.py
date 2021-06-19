@@ -107,3 +107,19 @@ class EmailTokenTable(Base):
     expired_at = Column(pg.TIMESTAMP, nullable=False)
 
     user = orm.relationship(UserTable)
+
+
+class PasswordTokenTable(Base):
+    __tablename__ = "password_tokens"
+
+    token = Column(pg.VARCHAR(64), primary_key=True)
+    user_id = Column(
+        pg.UUID,
+        ForeignKey(UserTable.user_id),
+        nullable=False,
+    )
+    created_at = Column(pg.TIMESTAMP, nullable=False)
+    expired_at = Column(pg.TIMESTAMP, nullable=False)
+
+    user = orm.relationship(UserTable)
+
