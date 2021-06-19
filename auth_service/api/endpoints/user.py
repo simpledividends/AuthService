@@ -233,7 +233,7 @@ async def forgot_password(
         422: responses.unprocessable_entity_or_password_improper,
     }
 )
-async def verify_email_change(
+async def reset_password(
     request: Request,
     verification: TokenPasswordBody,
 ) -> JSONResponse:

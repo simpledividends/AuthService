@@ -47,6 +47,7 @@ MY_PASSWORD = "/auth/users/me/password"
 MY_EMAIL = "/auth/users/me/email"
 VERIFY_EMAIL_PATH = "/auth/email/verify"
 FORGOT_PASSWORD_PATH = "/auth/password/forgot"
+RESET_PASSWORD_PATH = "/auth/password/reset"
 USER_PATH_TEMPLATE = "/auth/users/{user_id}"
 
 
@@ -707,6 +708,92 @@ def test_forgot_password_when_too_many_requests(
         else:
             assert n_tokens == i + 1
             assert n_mails == i
+
+
+def test_password_reset_success(
+    client: TestClient,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    user = make_db_user()
+    token_string = "abracadabra"
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_password_token(token_hashed, user_id=user.user_id)
+    create_db_object(user)
+    create_db_object(token)
+
+    password = "VeryH@rdPa$$w0rd"
+    with client:
+        resp = client.post(
+            RESET_PASSWORD_PATH,
+            json={"token": token_string, "password": password},
+        )
+    assert resp.status_code == HTTPStatus.OK
+
+    assert_all_tables_are_empty(db_session, [UserTable])
+    users = db_session.query(UserTable).all()
+    assert len(users) == 1
+    assert security_service.is_password_correct(password, users[0].password)
+
+
+def test_reset_password_with_weak_new_password(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    with client:
+        resp = client.post(
+            RESET_PASSWORD_PATH,
+            json={"token": "hashed_token", "password": "weak"},
+        )
+
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert (
+        resp.json()["errors"][0]["error_key"]
+        == "value_error.password.improper"
+    )
+
+
+@pytest.mark.parametrize(
+    "token_string,expired_at",
+    (
+        ("other_token", utc_now() + timedelta(days=10)),
+        ("my_token", utc_now() - timedelta(days=10)),
+    )
+)
+def test_reset_password_incorrect_token(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    db_session: orm.Session,
+    token_string: str,
+    expired_at: datetime,
+) -> None:
+    old_password = "old_pass"
+    user = make_db_user(password=security_service.hash_password(old_password))
+    token_hashed = security_service.hash_token_string(token_string)
+    token = make_password_token(
+        token_hashed,
+        user_id=user.user_id,
+        expired_at=expired_at,
+    )
+    create_db_object(user)
+    create_db_object(token)
+
+    password = "VeryH@rdPa$$w0rd"
+    with client:
+        resp = client.post(
+            RESET_PASSWORD_PATH,
+            json={"token": "my_token", "password": password},
+        )
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+    assert len(db_session.query(PasswordTokenTable).all()) == 1
+    users = db_session.query(UserTable).all()
+    assert len(users) == 1
+    user = users[0]
+    assert security_service.is_password_correct(old_password, user.password)
 
 
 def test_get_user_success(
