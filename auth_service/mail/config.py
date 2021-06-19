@@ -13,3 +13,10 @@ CHANGE_EMAIL_TEXT_TEMPLATE = """
 Ссылка для подтверждения email: {link}
 """
 CHANGE_EMAIL_HTML = "change_email.html"
+
+FORGOT_PASSWORD_SUBJECT = "Сброс пароля"
+FORGOT_PASSWORD_SENDER = "noreply@{domain}"
+FORGOT_PASSWORD_TEXT_TEMPLATE = """
+Ссылка для Сброса пароля: {link}
+"""
+FORGOT_PASSWORD_HTML = "forgot_password.html"

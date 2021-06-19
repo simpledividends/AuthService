@@ -16,6 +16,10 @@ from .config import (
     CHANGE_EMAIL_SENDER,
     CHANGE_EMAIL_SUBJECT,
     CHANGE_EMAIL_TEXT_TEMPLATE,
+    FORGOT_PASSWORD_HTML,
+    FORGOT_PASSWORD_SENDER,
+    FORGOT_PASSWORD_SUBJECT,
+    FORGOT_PASSWORD_TEXT_TEMPLATE,
     REGISTRATION_EMAIL_SENDER,
     REGISTRATION_EMAIL_SUBJECT,
     REGISTRATION_EMAIL_TEXT_TEMPLATE,
@@ -37,6 +41,7 @@ class MailService(BaseModel):
     mail_domain: str
     register_verify_link_template: str
     change_email_link_template: str
+    forgot_password_link_template: str
 
     async def send_mail(
         self,
@@ -97,6 +102,31 @@ class MailService(BaseModel):
             from_user=CHANGE_EMAIL_SENDER.format(domain=self.mail_domain),
             email=new_email,
             subject=CHANGE_EMAIL_SUBJECT,
+            text=text,
+            html=rendered,
+        )
+
+    async def send_forgot_password_letter(
+        self,
+        user: User,
+        token: str,
+    ) -> None:
+        jinja_env = Environment(
+            loader=FileSystemLoader(TEMPLATES_PATH),
+            autoescape=True,
+        )
+        template = jinja_env.get_template(FORGOT_PASSWORD_HTML)
+        link = self.forgot_password_link_template.format(token=token)
+        context = {
+            "user": user,
+            "link": link,
+        }
+        rendered = template.render(context)
+        text = FORGOT_PASSWORD_TEXT_TEMPLATE.format(link=link)
+        await self.send_mail(
+            from_user=FORGOT_PASSWORD_SENDER.format(domain=self.mail_domain),
+            email=user.email,
+            subject=FORGOT_PASSWORD_SUBJECT,
             text=text,
             html=rendered,
         )

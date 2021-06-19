@@ -65,6 +65,7 @@ class MailConfig(Config):
     mail_domain: str
     register_verify_link_template: str
     change_email_link_template: str
+    forgot_password_link_template: str
 
     mailgun_config: MailgunConfig
 
