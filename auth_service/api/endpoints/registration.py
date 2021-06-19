@@ -90,7 +90,7 @@ async def register(
     response_model=User,
     responses={
         403: responses.forbidden,
-        409: responses.conflict_register_verify,
+        409: responses.conflict_email_exists,
         422: responses.unprocessable_entity,
     }
 )
@@ -108,8 +108,8 @@ async def verify_registered_user(
         raise ForbiddenException()
     except UserAlreadyExists:
         raise UserConflictException(
-            error_key="email.already_verified",
-            error_message="User with this email is already exists",
+            error_key="email.already_exists",
+            error_message="User with this email already exists",
         )
 
     return user
