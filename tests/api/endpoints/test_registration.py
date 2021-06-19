@@ -10,7 +10,7 @@ from sqlalchemy import orm
 from starlette.testclient import TestClient
 
 from auth_service.db.models import (
-    Base,
+    EmailTokenTable,
     NewcomerTable,
     RegistrationTokenTable,
     UserTable,
@@ -29,11 +29,13 @@ from tests.constants import (
     USER_PASSWORD,
 )
 from tests.helpers import (
+    DBObjectCreator,
     FakeMailgunServer,
     assert_all_tables_are_empty,
     make_db_newcomer,
     make_db_registration_token,
     make_db_user,
+    make_email_token,
 )
 from tests.utils import ApproxDatetime
 
@@ -162,7 +164,7 @@ def test_strip_name_and_email(
         (
             {"password": "simple"},
             ["body", "password"],
-            "value_error.password.invalid"
+            "value_error.password.improper"
         ),
     )
 )
@@ -194,7 +196,7 @@ def test_registration_validation_errors(
 
 def test_registration_when_user_exists(
     client: TestClient,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
     db_session: orm.Session,
     fake_mailgun_server: FakeMailgunServer,
 ) -> None:
@@ -217,11 +219,27 @@ def test_registration_when_user_exists(
 def test_registration_when_newcomers_exist(
     client: TestClient,
     service_config: ServiceConfig,
+    create_db_object: DBObjectCreator,
     db_session: orm.Session,
     fake_mailgun_server: FakeMailgunServer,
 ) -> None:
     request_body = REGISTER_REQUEST_BODY.copy()
-    max_same_newcomers = service_config.max_newcomers_with_same_email
+    max_same_newcomers = (
+        service_config
+        .db_config
+        .max_active_newcomers_with_same_email
+    )
+
+    # Add nonactive newcomers to check that they do not affect
+    newcomer_without_token = make_db_newcomer()
+    create_db_object(newcomer_without_token)
+    newcomer_with_expired_token = make_db_newcomer()
+    create_db_object(newcomer_with_expired_token)
+    expired_token = make_db_registration_token(
+        user_id=newcomer_with_expired_token.user_id,
+        expired_at=utc_now() - timedelta(days=1),
+    )
+    create_db_object(expired_token)
 
     for i in range(max_same_newcomers + 1):
         with client:
@@ -240,20 +258,61 @@ def test_registration_when_newcomers_exist(
         db_session,
         [NewcomerTable, RegistrationTokenTable],
     )
-    assert len(db_session.query(NewcomerTable).all()) == max_same_newcomers
+    assert len(db_session.query(NewcomerTable).all()) == 2 + max_same_newcomers
     assert (
        len(db_session.query(RegistrationTokenTable).all())
-       == max_same_newcomers
+       == 1 + max_same_newcomers
     )
 
     assert len(fake_mailgun_server.requests) == max_same_newcomers
+
+
+def test_registration_when_requests_for_email_change_exist(
+    client: TestClient,
+    service_config: ServiceConfig,
+    create_db_object: DBObjectCreator,
+    db_session: orm.Session,
+    fake_mailgun_server: FakeMailgunServer,
+) -> None:
+    request_body = REGISTER_REQUEST_BODY.copy()
+    max_email_change_requests = (
+        service_config
+        .db_config
+        .max_active_requests_change_same_email
+    )
+
+    for i in range(max_email_change_requests):
+        user = make_db_user()
+        create_db_object(user)
+        token = make_email_token(
+            token=f"hashed_token_{i}",
+            user_id=user.user_id,
+            email=request_body["email"],
+        )
+        create_db_object(token)
+
+    with client:
+        resp = client.post(
+            REGISTRATION_PATH,
+            json=request_body,
+        )
+
+    assert resp.status_code == HTTPStatus.CONFLICT
+    assert resp.json()["errors"][0]["error_key"] == "conflict"
+
+    assert_all_tables_are_empty(db_session, [UserTable, EmailTokenTable])
+    assert (
+       len(db_session.query(EmailTokenTable).all())
+       == max_email_change_requests
+    )
+    assert len(fake_mailgun_server.requests) == 0
 
 
 def test_register_verify_success(
     client: TestClient,
     db_session: orm.Session,
     security_service: SecurityService,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
 ) -> None:
     newcomer = make_db_newcomer()
     token_string = "abracadabra"
@@ -283,12 +342,8 @@ def test_register_verify_success(
     assert resp_json == expected_response
 
     # Check DB
-    assert_all_tables_are_empty(
-        db_session,
-        [UserTable, NewcomerTable, RegistrationTokenTable],
-    )
+    assert_all_tables_are_empty(db_session, [UserTable, NewcomerTable])
     assert len(db_session.query(NewcomerTable).all()) == 1
-    assert len(db_session.query(RegistrationTokenTable).all()) == 1
     users = db_session.query(UserTable).all()
     assert len(users) == 1
     user = users[0]
@@ -308,7 +363,7 @@ def test_register_verify_success(
 def test_register_verify_incorrect_token(
     client: TestClient,
     security_service: SecurityService,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
     token_string: str,
     expired_at: datetime,
 ) -> None:
@@ -333,7 +388,7 @@ def test_register_verify_incorrect_token(
 def test_register_verify_user_already_exists(
     client: TestClient,
     security_service: SecurityService,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
 ) -> None:
     newcomer = make_db_newcomer()
     token_string = "abracadabra"
@@ -350,4 +405,4 @@ def test_register_verify_user_already_exists(
             json={"token": token_string},
         )
     assert resp.status_code == HTTPStatus.CONFLICT
-    assert resp.json()["errors"][0]["error_key"] == "email.already_verified"
+    assert resp.json()["errors"][0]["error_key"] == "email.already_exists"

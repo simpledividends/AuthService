@@ -6,5 +6,21 @@ class TooManyNewcomersWithSameEmail(Exception):
     pass
 
 
+class TooManyChangeSameEmailRequests(Exception):
+    pass
+
+
 class TokenNotFound(Exception):
+    pass
+
+
+class NotExists(Exception):
+    pass
+
+
+class UserNotExists(NotExists):
+    pass
+
+
+class PasswordInvalid(Exception):
     pass

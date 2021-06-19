@@ -1,6 +1,7 @@
 import typing as tp
 
 from pydantic import BaseModel
+from pydantic.networks import EmailStr
 
 
 class Error(BaseModel):
@@ -11,3 +12,10 @@ class Error(BaseModel):
 
 class ErrorResponse(BaseModel):
     errors: tp.List[Error]
+
+
+class Email(EmailStr):
+
+    @classmethod
+    def validate(cls, value: str) -> str:
+        return super().validate(value).strip().lower()

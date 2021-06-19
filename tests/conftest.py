@@ -22,11 +22,16 @@ from auth_service.db.service import DBService
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig, get_config
 from tests.constants import (
+    CHANGE_EMAIL_LINK_TEMPLATE,
     MAILGUN_API_KEY,
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
 )
-from tests.helpers import FakeMailgunServer
+from tests.helpers import (
+    DBObjectCreator,
+    FakeMailgunServer,
+    check_access_forbidden,
+)
 
 CURRENT_DIR = Path(__file__).parent
 ALEMBIC_INI_PATH = CURRENT_DIR.parent / "alembic.ini"
@@ -107,7 +112,7 @@ def mailgun_server_url(
 @pytest.fixture
 def create_db_object(
     db_session: orm.Session,
-) -> tp.Callable[[Base], None]:
+) -> DBObjectCreator:
     assert db_session.is_active
 
     def create(obj: Base) -> None:
@@ -124,6 +129,10 @@ def set_env(mailgun_server_url: str) -> tp.Generator[None, None, None]:
     monkeypatch.setenv(
         "REGISTER_VERIFY_LINK_TEMPLATE",
         REGISTER_VERIFY_LINK_TEMPLATE,
+    )
+    monkeypatch.setenv(
+        "CHANGE_EMAIL_LINK_TEMPLATE",
+        CHANGE_EMAIL_LINK_TEMPLATE,
     )
     monkeypatch.setenv("MAILGUN_API_KEY", MAILGUN_API_KEY)
     monkeypatch.setenv("MAILGUN_URL", mailgun_server_url)
@@ -157,3 +166,21 @@ def app(service_config: ServiceConfig, db_session: orm.Session) -> FastAPI:
 @pytest.fixture
 def client(app: FastAPI) -> TestClient:
     return TestClient(app=app)
+
+
+@pytest.fixture
+def access_forbidden_check(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> tp.Callable[[tp.Dict[str, tp.Any]], None]:
+
+    def check(request_params: tp.Dict[str, tp.Any]) -> None:
+        check_access_forbidden(
+            client,
+            security_service,
+            create_db_object,
+            request_params,
+        )
+
+    return check

@@ -25,6 +25,9 @@ class SecurityConfig(Config):
     password_hash_rounds: int = 100_000
     password_salt_size: int = 32
     registration_token_lifetime_seconds: float = 3600 * 24 * 7
+    change_email_token_lifetime_seconds: float = 3600 * 6
+    access_token_lifetime_seconds: float = 60 * 10
+    refresh_token_lifetime_seconds: float = 3600 * 24 * 1
 
 
 class DBPoolConfig(Config):
@@ -40,6 +43,9 @@ class DBPoolConfig(Config):
 
 
 class DBConfig(Config):
+    max_active_newcomers_with_same_email: int = 3
+    max_active_requests_change_same_email: int = 2
+
     n_transaction_retries: int = 10
     transaction_retry_interval_first: float = 0.01
     transaction_retry_interval_factor: float = 2
@@ -57,6 +63,7 @@ class MailgunConfig(Config):
 class MailConfig(Config):
     mail_domain: str
     register_verify_link_template: str
+    change_email_link_template: str
 
     mailgun_config: MailgunConfig
 
@@ -64,7 +71,6 @@ class MailConfig(Config):
 class ServiceConfig(Config):
     service_name: str = "auth_service"
     request_id_header: str = "X-Request-Id"
-    max_newcomers_with_same_email: int = 3
 
     log_config: LogConfig
     security_config: SecurityConfig
