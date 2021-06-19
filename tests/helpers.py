@@ -7,15 +7,25 @@ import orjson
 import werkzeug
 from sqlalchemy import inspect, orm
 from sqlalchemy.sql import text
+from starlette.testclient import TestClient
 
 from auth_service.db.models import (
+    AccessTokenTable,
     Base,
+    EmailTokenTable,
     NewcomerTable,
+    PasswordTokenTable,
+    RefreshTokenTable,
     RegistrationTokenTable,
+    SessionTable,
     UserTable,
 )
 from auth_service.models.user import UserRole
+from auth_service.security import SecurityService
 from auth_service.utils import utc_now
+from tests.utils import random_email
+
+DBObjectCreator = tp.Callable[[Base], None]
 
 
 class FakeMailgunServer:
@@ -62,7 +72,7 @@ def assert_all_tables_are_empty(
 def make_db_user(
     user_id: tp.Optional[UUID] = None,
     name: str = "user name",
-    email: str = "simple@dividends.ru",
+    email: tp.Optional[str] = None,
     password: str = "hashed_pass",
     created_at: datetime = datetime(2021, 6, 12),
     verified_at: datetime = datetime(2021, 6, 13),
@@ -71,7 +81,7 @@ def make_db_user(
     return UserTable(
         user_id=str(user_id or uuid4()),
         name=name,
-        email=email,
+        email=email or random_email(),
         password=password,
         created_at=created_at,
         verified_at=verified_at,
@@ -96,14 +106,145 @@ def make_db_newcomer(
 
 
 def make_db_registration_token(
-    token: str,
+    token: str = "hashed_token",
     user_id: tp.Optional[UUID] = None,
     created_at: datetime = datetime(2021, 6, 12),
-    expired_at: datetime = utc_now() + timedelta(days=10),
+    expired_at: tp.Optional[datetime] = None,
 ) -> RegistrationTokenTable:
     return RegistrationTokenTable(
         token=token,
         user_id=str(user_id or uuid4()),
         created_at=created_at,
-        expired_at=expired_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
     )
+
+
+def make_email_token(
+    token: str = "hashed_token",
+    user_id: tp.Optional[UUID] = None,
+    email: str = "some@mail.ru",
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> EmailTokenTable:
+    return EmailTokenTable(
+        token=token,
+        user_id=str(user_id or uuid4()),
+        email=email,
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_password_token(
+    token: str = "hashed_token",
+    user_id: tp.Optional[UUID] = None,
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> EmailTokenTable:
+    return PasswordTokenTable(
+        token=token,
+        user_id=str(user_id or uuid4()),
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_db_session(
+    session_id: tp.Optional[UUID] = None,
+    user_id: tp.Optional[UUID] = None,
+    started_at: datetime = datetime(2021, 6, 12),
+    finished_at: tp.Optional[datetime] = None,
+) -> SessionTable:
+    return SessionTable(
+        session_id=str(session_id or uuid4()),
+        user_id=str(user_id or uuid4()),
+        started_at=started_at,
+        finished_at=finished_at,
+    )
+
+
+def make_access_token(
+    token: str,
+    session_id: tp.Optional[UUID] = None,
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> AccessTokenTable:
+    return AccessTokenTable(
+        token=token,
+        session_id=str(session_id or uuid4()),
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_refresh_token(
+    token: str,
+    session_id: tp.Optional[UUID] = None,
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> RefreshTokenTable:
+    return RefreshTokenTable(
+        token=token,
+        session_id=str(session_id or uuid4()),
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def create_authorized_user(
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    user_role: UserRole = UserRole.user,
+    token_expired_at: tp.Optional[datetime] = None,
+    hashed_password: str = "hashed_password"
+) -> tp.Tuple[UserTable, str]:
+    user = make_db_user(role=user_role, password=hashed_password)
+    session = make_db_session(user_id=user.user_id)
+    token_string, token = security_service.make_access_token(uuid4())
+    token_db = make_access_token(
+        token=token.token,
+        session_id=session.session_id,
+        expired_at=token_expired_at,
+    )
+    for obj in (user, session, token_db):
+        create_db_object(obj)
+
+    return user, token_string
+
+
+def check_access_forbidden(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+    request_params: tp.Dict[str, tp.Any],
+) -> None:
+    cases = (
+        ("NotAuthorization", "Bearer ", None, "authorization.not_set"),
+        ("Authorization", "Bearer", None, "authorization.scheme_unrecognised"),
+        ("Authorization", "NotBearer ", None, "authorization.scheme_invalid"),
+        ("Authorization", "Bearer ", "incorrect_token", "forbidden"),
+        ("Authorization", "Bearer ", "expired_token", "forbidden"),
+    )
+
+    for key, value_beginning, token, expected_error_key in cases:
+        if token == "expired_token":
+            token_expired_at = utc_now() - timedelta(seconds=1)
+            token = None
+        else:
+            token_expired_at = utc_now() + timedelta(hours=1)
+
+        _, access_token = create_authorized_user(
+            security_service,
+            create_db_object,
+            token_expired_at=token_expired_at,
+        )
+        token = token or access_token
+
+        with client:
+            resp = client.request(
+                **request_params,
+                headers={key: value_beginning + token}
+            )
+
+        assert resp.status_code == HTTPStatus.FORBIDDEN
+        assert resp.json()["errors"][0]["error_key"] == expected_error_key

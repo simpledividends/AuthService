@@ -8,16 +8,25 @@ from aiohttp import BasicAuth
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, HttpUrl
 
-from auth_service.models.user import Newcomer
+from auth_service.models.user import Newcomer, User
 
+from ..models.common import Email
 from .config import (
+    CHANGE_EMAIL_HTML,
+    CHANGE_EMAIL_SENDER,
+    CHANGE_EMAIL_SUBJECT,
+    CHANGE_EMAIL_TEXT_TEMPLATE,
     REGISTRATION_EMAIL_SENDER,
     REGISTRATION_EMAIL_SUBJECT,
     REGISTRATION_EMAIL_TEXT_TEMPLATE,
+    REGISTRATION_MAIL_HTML,
+    RESET_PASSWORD_HTML,
+    RESET_PASSWORD_SENDER,
+    RESET_PASSWORD_SUBJECT,
+    RESET_PASSWORD_TEXT_TEMPLATE,
 )
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
-REGISTRATION_MAIL_TEMPLATE = "registration.html"
 
 
 class SendMailError(Exception):
@@ -31,11 +40,13 @@ class SendMailError(Exception):
 class MailService(BaseModel):
     mail_domain: str
     register_verify_link_template: str
+    change_email_link_template: str
+    reset_password_link_template: str
 
     async def send_mail(
         self,
-        from_user,
-        email: str,
+        from_user: str,
+        email: Email,
         subject: str,
         text: str,
         html: str,
@@ -51,7 +62,7 @@ class MailService(BaseModel):
             loader=FileSystemLoader(TEMPLATES_PATH),
             autoescape=True,
         )
-        template = jinja_env.get_template(REGISTRATION_MAIL_TEMPLATE)
+        template = jinja_env.get_template(REGISTRATION_MAIL_HTML)
         link = self.register_verify_link_template.format(token=token)
         context = {
             "newcomer": newcomer,
@@ -65,6 +76,57 @@ class MailService(BaseModel):
             ),
             email=newcomer.email,
             subject=REGISTRATION_EMAIL_SUBJECT,
+            text=text,
+            html=rendered,
+        )
+
+    async def send_change_email_letter(
+        self,
+        user: User,
+        new_email: Email,
+        token: str,
+    ) -> None:
+        jinja_env = Environment(
+            loader=FileSystemLoader(TEMPLATES_PATH),
+            autoescape=True,
+        )
+        template = jinja_env.get_template(CHANGE_EMAIL_HTML)
+        link = self.change_email_link_template.format(token=token)
+        context = {
+            "user": user,
+            "link": link,
+        }
+        rendered = template.render(context)
+        text = CHANGE_EMAIL_TEXT_TEMPLATE.format(link=link)
+        await self.send_mail(
+            from_user=CHANGE_EMAIL_SENDER.format(domain=self.mail_domain),
+            email=new_email,
+            subject=CHANGE_EMAIL_SUBJECT,
+            text=text,
+            html=rendered,
+        )
+
+    async def send_forgot_password_letter(
+        self,
+        user: User,
+        token: str,
+    ) -> None:
+        jinja_env = Environment(
+            loader=FileSystemLoader(TEMPLATES_PATH),
+            autoescape=True,
+        )
+        template = jinja_env.get_template(RESET_PASSWORD_HTML)
+        link = self.reset_password_link_template.format(token=token)
+        context = {
+            "user": user,
+            "link": link,
+        }
+        rendered = template.render(context)
+        text = RESET_PASSWORD_TEXT_TEMPLATE.format(link=link)
+        await self.send_mail(
+            from_user=RESET_PASSWORD_SENDER.format(domain=self.mail_domain),
+            email=user.email,
+            subject=RESET_PASSWORD_SUBJECT,
             text=text,
             html=rendered,
         )
@@ -87,8 +149,8 @@ class MailgunMailService(MailService):
 
     async def send_mail(
         self,
-        from_user,
-        email: str,
+        from_user: str,
+        email: Email,
         subject: str,
         text: str,
         html: str,

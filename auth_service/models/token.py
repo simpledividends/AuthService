@@ -3,9 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-
-class VerificationRequest(BaseModel):
-    token: str
+from .common import Email
 
 
 class Token(BaseModel):
@@ -14,5 +12,29 @@ class Token(BaseModel):
     expired_at: datetime
 
 
-class RegistrationToken(Token):
+class UserToken(Token):
     user_id: UUID
+
+
+class SessionToken(Token):
+    session_id: UUID
+
+
+class RegistrationToken(UserToken):
+    pass
+
+
+class ChangeEmailToken(UserToken):
+    email: Email
+
+
+class PasswordToken(UserToken):
+    pass
+
+
+class AccessToken(SessionToken):
+    pass
+
+
+class RefreshToken(SessionToken):
+    pass

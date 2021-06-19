@@ -1,8 +1,8 @@
-"""add_registration_tokens_table
+"""add_email_tokens_table
 
-Revision ID: c3522116d928
-Revises: 7a05b5faf3eb
-Create Date: 2021-06-11 21:21:47.140763
+Revision ID: 57e71c68b430
+Revises: 479e659114ca
+Create Date: 2021-06-17 15:39:35.502867
 
 """
 import sqlalchemy as sa
@@ -11,28 +11,36 @@ from sqlalchemy import VARCHAR
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 
 # revision identifiers, used by Alembic.
-revision = "c3522116d928"
-down_revision = "7a05b5faf3eb"
+revision = '57e71c68b430'
+down_revision = '479e659114ca'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
     op.create_table(
-        "registration_tokens",
+        "email_tokens",
         sa.Column("token", VARCHAR(64), nullable=False),
         sa.Column("user_id", UUID, nullable=False),
+        sa.Column("email", VARCHAR(128), nullable=False),
         sa.Column("created_at", TIMESTAMP, nullable=False),
         sa.Column("expired_at", TIMESTAMP, nullable=False),
 
         sa.PrimaryKeyConstraint("token"),
         sa.ForeignKeyConstraint(
             columns=("user_id",),
-            refcolumns=("newcomers.user_id",),
+            refcolumns=("users.user_id",),
             ondelete="CASCADE",
         ),
+    )
+    op.create_index(
+        op.f("ix_email_tokens_email"),
+        "email_tokens",
+        ["email"],
+        unique=False,
     )
 
 
 def downgrade():
-    op.drop_table("registration_tokens")
+    op.drop_index(op.f("ix_email_tokens_email"), table_name="email_tokens")
+    op.drop_table("email_tokens")
