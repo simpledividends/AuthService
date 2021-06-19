@@ -13,6 +13,7 @@ from auth_service.db.exceptions import (
     TokenNotFound,
     TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
+    TooManyPasswordTokens,
     UserAlreadyExists,
     UserNotExists,
 )
@@ -20,6 +21,7 @@ from auth_service.log import app_logger
 from auth_service.models.token import (
     AccessToken,
     ChangeEmailToken,
+    PasswordToken,
     RefreshToken,
     RegistrationToken,
 )
@@ -39,6 +41,7 @@ class DBService(BaseModel):
     pool: Pool
     max_active_newcomers_with_same_email: int
     max_active_requests_change_same_email: int
+    max_active_user_password_tokens: int
     n_transaction_retries: int
     transaction_retry_interval_first: float
     transaction_retry_interval_factor: float
@@ -577,3 +580,74 @@ class DBService(BaseModel):
             WHERE token = $1::VARCHAR
         """
         await conn.execute(query, token)
+
+    async def get_user_by_email(self, email: str) -> User:
+        query = """
+            SELECT
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+            FROM users
+            WHERE email = $1::VARCHAR
+        """
+        record = await self.pool.fetchrow(query, email)
+        if record is None:
+            raise UserNotExists()
+        return User(**record)
+
+    async def create_password_token(self, token: PasswordToken) -> None:
+        func = partial(self._verify_email, token=token)
+        user = await self.execute_serializable_transaction(func)
+        return user
+
+    async def _create_password_token(
+        self,
+        conn: Connection,
+        token: PasswordToken,
+    ) -> None:
+        query = """
+            SELECT user_id
+            FROM users
+            WHERE user_id = $1::UUID
+        """
+        if await conn.fetchval(query, token.user_id) is None:
+            raise UserNotExists()
+
+        n_tokens = await self._count_password_tokens(conn, token.user_id)
+        if n_tokens > self.max_active_user_password_tokens:
+            raise TooManyPasswordTokens()
+
+        query = """
+            INSERT INTO password_tokens
+                (token, user_id, created_at, expired_at)
+            VALUES
+                (
+                    $1::VARCHAR
+                    , $2::UUID
+                    , $4::TIMESTAMP
+                    , $5::TIMESTAMP
+                )
+            ;
+        """
+        await conn.execute(
+            query,
+            token.token,
+            token.user_id,
+            token.created_at,
+            token.expired_at,
+        )
+
+
+
+    @staticmethod
+    async def _count_password_tokens(conn: Connection, user_id: UUID) -> int:
+        query = """
+            SELECT count(*)
+            FROM password_tokens
+            WHERE user_id = $1::UUID AND expired_at > $2::TIMESTAMP;
+        """
+        n_tokens = await conn.fetchval(query, user_id, utc_now())
+        return n_tokens

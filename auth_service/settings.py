@@ -46,6 +46,7 @@ class DBPoolConfig(Config):
 class DBConfig(Config):
     max_active_newcomers_with_same_email: int = 3
     max_active_requests_change_same_email: int = 2
+    max_active_user_password_tokens = 2
 
     n_transaction_retries: int = 10
     transaction_retry_interval_first: float = 0.01

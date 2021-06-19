@@ -10,6 +10,10 @@ class TooManyChangeSameEmailRequests(Exception):
     pass
 
 
+class TooManyPasswordTokens(Exception):
+    pass
+
+
 class TokenNotFound(Exception):
     pass
 
