@@ -20,11 +20,13 @@ from auth_service.api.services import (
 )
 from auth_service.db.exceptions import (
     PasswordInvalid,
+    TokenNotFound,
     TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
     UserNotExists,
 )
+from auth_service.models.auth import TokenBody
 from auth_service.models.user import (
     ChangeEmailRequest,
     ChangePasswordRequest,
@@ -150,6 +152,37 @@ async def patch_my_email(
         new_email=data.new_email,
         token=token_string,
     )
+    return create_response(status_code=HTTPStatus.OK)
+
+
+@router.post(
+    path="/auth/email/verify",
+    tags=["User"],
+    status_code=HTTPStatus.OK,
+    responses={
+        403: responses.forbidden,
+        409: responses.conflict_email_exists,
+        422: responses.unprocessable_entity,
+    }
+)
+async def verify_email_change(
+    request: Request,
+    verification: TokenBody,
+) -> JSONResponse:
+    security_service = get_security_service(request.app)
+    hashed_token = security_service.hash_token_string(verification.token)
+
+    db_service = get_db_service(request.app)
+    try:
+        _ = await db_service.verify_email(hashed_token)
+    except TokenNotFound:
+        raise ForbiddenException()
+    except UserAlreadyExists:
+        raise UserConflictException(
+            error_key="email.already_exists",
+            error_message="User with this email is already exists",
+        )
+
     return create_response(status_code=HTTPStatus.OK)
 
 
