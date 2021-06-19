@@ -28,6 +28,10 @@ class ChangeEmailToken(UserToken):
     email: Email
 
 
+class PasswordToken(UserToken):
+    pass
+
+
 class AccessToken(SessionToken):
     pass
 

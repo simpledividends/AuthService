@@ -14,7 +14,7 @@ from auth_service.models.token import (
     ChangeEmailToken,
     RefreshToken,
     RegistrationToken,
-    Token,
+    Token, PasswordToken,
 )
 from auth_service.utils import utc_now
 
@@ -28,6 +28,7 @@ class SecurityService(BaseModel):
     password_salt_size: int
     registration_token_lifetime: timedelta
     change_email_token_lifetime: timedelta
+    password_token_lifetime: timedelta
     access_token_lifetime: timedelta
     refresh_token_lifetime: timedelta
 
@@ -96,6 +97,14 @@ class SecurityService(BaseModel):
             email=email,
         )
         return token_string, change_email_token
+
+    def make_password_token(
+        self,
+        user_id: UUID,
+    ) -> tp.Tuple[str, PasswordToken]:
+        token_string, token = self.make_token(self.password_token_lifetime)
+        password_token = PasswordToken(**token.dict(), user_id=user_id)
+        return token_string, password_token
 
     def make_access_token(
         self,
