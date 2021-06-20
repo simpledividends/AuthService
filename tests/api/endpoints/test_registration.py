@@ -10,7 +10,6 @@ from sqlalchemy import orm
 from starlette.testclient import TestClient
 
 from auth_service.db.models import (
-    Base,
     NewcomerTable,
     RegistrationTokenTable,
     UserTable,
@@ -29,6 +28,7 @@ from tests.constants import (
     USER_PASSWORD,
 )
 from tests.helpers import (
+    DBObjectCreator,
     FakeMailgunServer,
     assert_all_tables_are_empty,
     make_db_newcomer,
@@ -194,7 +194,7 @@ def test_registration_validation_errors(
 
 def test_registration_when_user_exists(
     client: TestClient,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
     db_session: orm.Session,
     fake_mailgun_server: FakeMailgunServer,
 ) -> None:
@@ -253,7 +253,7 @@ def test_register_verify_success(
     client: TestClient,
     db_session: orm.Session,
     security_service: SecurityService,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
 ) -> None:
     newcomer = make_db_newcomer()
     token_string = "abracadabra"
@@ -308,7 +308,7 @@ def test_register_verify_success(
 def test_register_verify_incorrect_token(
     client: TestClient,
     security_service: SecurityService,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
     token_string: str,
     expired_at: datetime,
 ) -> None:
@@ -333,7 +333,7 @@ def test_register_verify_incorrect_token(
 def test_register_verify_user_already_exists(
     client: TestClient,
     security_service: SecurityService,
-    create_db_object: tp.Callable[[Base], None],
+    create_db_object: DBObjectCreator,
 ) -> None:
     newcomer = make_db_newcomer()
     token_string = "abracadabra"

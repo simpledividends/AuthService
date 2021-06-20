@@ -4,10 +4,6 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-class VerificationRequest(BaseModel):
-    token: str
-
-
 class Token(BaseModel):
     token: str
     created_at: datetime
@@ -16,3 +12,11 @@ class Token(BaseModel):
 
 class RegistrationToken(Token):
     user_id: UUID
+
+
+class AccessToken(Token):
+    session_id: UUID
+
+
+class RefreshToken(Token):
+    session_id: UUID

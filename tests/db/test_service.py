@@ -1,5 +1,4 @@
 import asyncio
-import typing as tp
 
 import pytest
 from sqlalchemy import orm
@@ -8,11 +7,15 @@ from auth_service.db.exceptions import (
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
 )
-from auth_service.db.models import Base, NewcomerTable, UserTable
+from auth_service.db.models import NewcomerTable, UserTable
 from auth_service.db.service import DBService
 from auth_service.models.user import NewcomerRegistered
 from auth_service.settings import ServiceConfig
-from tests.helpers import make_db_newcomer, make_db_registration_token
+from tests.helpers import (
+    DBObjectCreator,
+    make_db_newcomer,
+    make_db_registration_token,
+)
 
 
 @pytest.mark.asyncio
@@ -44,7 +47,7 @@ async def test_verification_when_users_exist_with_parallel_requests(
     service_config: ServiceConfig,
     db_service: DBService,
     db_session: orm.Session,
-    create_db_object: tp.Callable[[Base], None]
+    create_db_object: DBObjectCreator
 ) -> None:
     n = 10
 

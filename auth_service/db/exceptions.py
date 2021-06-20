@@ -8,3 +8,7 @@ class TooManyNewcomersWithSameEmail(Exception):
 
 class TokenNotFound(Exception):
     pass
+
+
+class UserNotExists(Exception):
+    pass

@@ -25,6 +25,8 @@ class SecurityConfig(Config):
     password_hash_rounds: int = 100_000
     password_salt_size: int = 32
     registration_token_lifetime_seconds: float = 3600 * 24 * 7
+    access_token_lifetime_seconds: float = 60 * 10
+    refresh_token_lifetime_seconds: float = 3600 * 24 * 1
 
 
 class DBPoolConfig(Config):

@@ -33,10 +33,10 @@ def upgrade():
 
         sa.PrimaryKeyConstraint("user_id")
     )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
 
 
 def downgrade():
-    op.drop_index(op.f('ix_users_email'), table_name='users')
-    op.drop_table('users')
-    op.execute('DROP TYPE role_enum')
+    op.drop_index(op.f("ix_users_email"), table_name="users")
+    op.drop_table("users")
+    op.execute("DROP TYPE role_enum")
