@@ -1,3 +1,4 @@
+import random
 import typing as tp
 from datetime import datetime, timedelta
 
@@ -16,3 +17,7 @@ class ApproxDatetime:
         if not isinstance(actual, datetime):
             return False
         return self.min_ <= actual <= self.max_
+
+
+def random_email() -> str:
+    return f"name{random.randint(1, 10**9)}@example.com"

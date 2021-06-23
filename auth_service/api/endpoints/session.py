@@ -32,14 +32,14 @@ async def login(
             credentials.email
         )
     except UserNotExists:
-        raise ForbiddenException()
+        raise ForbiddenException(error_key="credentials.invalid")
 
     security_service = get_security_service(request.app)
     if not security_service.is_password_correct(
         credentials.password,
         hashed_password,
     ):
-        raise ForbiddenException()
+        raise ForbiddenException(error_key="credentials.invalid")
 
     session_id = await db_service.create_session(user_id)
     access_string, access = security_service.make_access_token(session_id)

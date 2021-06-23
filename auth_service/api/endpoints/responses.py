@@ -103,3 +103,22 @@ forbidden = {
         },
     },
 }
+
+
+not_found = {
+    "model": ErrorResponse,
+    "description": "Error: Not found",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="not_found",
+                        error_message="Resource not found",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}

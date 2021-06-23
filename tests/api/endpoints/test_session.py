@@ -106,4 +106,5 @@ def test_login_forbidden(
         )
 
     assert resp.status_code == HTTPStatus.FORBIDDEN
+    assert resp.json()["errors"][0]["error_key"] == "credentials.invalid"
     assert_all_tables_are_empty(db_session, [UserTable])
