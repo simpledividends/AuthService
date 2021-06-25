@@ -10,5 +10,9 @@ class TokenNotFound(Exception):
     pass
 
 
-class UserNotExists(Exception):
+class NotExists(Exception):
+    pass
+
+
+class UserNotExists(NotExists):
     pass
