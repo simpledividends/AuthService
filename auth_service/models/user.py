@@ -15,8 +15,11 @@ class UserRole(str, Enum):
 Name = constr(strip_whitespace=True, min_length=1, max_length=50)
 
 
-class NewcomerBase(BaseModel):
+class NewcomerInfo(BaseModel):
     name: Name  # type: ignore
+
+
+class NewcomerBase(NewcomerInfo):
     email: Email
 
 
@@ -27,6 +30,10 @@ class NewcomerRegistered(NewcomerBase):
 class Newcomer(NewcomerBase):
     user_id: UUID
     created_at: datetime
+
+
+class UserInfo(NewcomerInfo):
+    pass
 
 
 class User(Newcomer):
