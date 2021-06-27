@@ -384,3 +384,14 @@ class DBService(BaseModel):
             WHERE session_id = $1::UUID
         """
         await conn.execute(query, session_id)
+
+    async def drop_valid_refresh_token(self, token: str) -> UUID:
+        query = """
+            DELETE FROM refresh_tokens
+            WHERE token = $1::VARCHAR and expired_at > $2::TIMESTAMP
+            RETURNING session_id
+        """
+        session_id = await self.pool.fetchval(query, token, utc_now())
+        if session_id is None:
+            raise NotExists()
+        return session_id

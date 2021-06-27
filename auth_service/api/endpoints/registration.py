@@ -21,7 +21,7 @@ from auth_service.db.exceptions import (
 )
 from auth_service.db.service import DBService
 from auth_service.mail.service import MailService
-from auth_service.models.auth import VerificationRequest
+from auth_service.models.auth import TokenBody
 from auth_service.models.user import Newcomer, NewcomerRegistered, User
 from auth_service.security import SecurityService
 
@@ -97,7 +97,7 @@ async def register(
 )
 async def verify_registered_user(
     request: Request,
-    verification: VerificationRequest,
+    verification: TokenBody,
 ) -> User:
     security_service = get_security_service(request.app)
     hashed_token = security_service.hash_token_string(verification.token)
