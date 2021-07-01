@@ -1,9 +1,11 @@
 import asyncio
+import typing as tp
 
 import pytest
 from sqlalchemy import orm
 
 from auth_service.db.exceptions import (
+    PasswordInvalid,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
 )
@@ -15,6 +17,7 @@ from tests.helpers import (
     DBObjectCreator,
     make_db_newcomer,
     make_db_registration_token,
+    make_db_user,
 )
 
 
@@ -72,3 +75,46 @@ async def test_verification_when_users_exist_with_parallel_requests(
         await db_service.cleanup()
 
     assert len(db_session.query(UserTable).all()) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_passwords_with_parallel_requests(
+    service_config: ServiceConfig,
+    db_service: DBService,
+    db_session: orm.Session,
+    create_db_object: DBObjectCreator
+) -> None:
+    n = 10
+    user = make_db_user()
+    create_db_object(user)
+
+    new_passwords = [f"hashed_password_{i}" for i in range(n)]
+
+    def is_password_valid(password: str) -> bool:
+        return password == user.password
+
+    async def is_func_executed(func: tp.Awaitable[tp.Any]) -> bool:
+        try:
+            await func
+        except PasswordInvalid:
+            return False
+        return True
+
+    tasks = [
+        is_func_executed(
+            db_service.update_password_if_old_is_valid(
+                user_id=user.user_id,
+                new_password=new_password,
+                is_old_password_valid=is_password_valid,
+            )
+        )
+        for new_password in new_passwords
+    ]
+
+    await db_service.setup()
+    try:
+        execution_statuses = await asyncio.gather(*tasks)
+    finally:
+        await db_service.cleanup()
+
+    assert sum(execution_statuses) == 1

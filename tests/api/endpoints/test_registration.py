@@ -162,7 +162,7 @@ def test_strip_name_and_email(
         (
             {"password": "simple"},
             ["body", "password"],
-            "value_error.password.invalid"
+            "value_error.password.improper"
         ),
     )
 )

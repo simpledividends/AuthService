@@ -19,7 +19,7 @@ unprocessable_entity = {
 }
 
 
-unprocessable_entity_or_password_invalid = {
+unprocessable_entity_or_password_improper = {
     "model": ErrorResponse,
     "description": "Error: Unprocessable Entity",
     "content": {
@@ -32,8 +32,8 @@ unprocessable_entity_or_password_invalid = {
                         error_loc=["body", "some_place"],
                     ),
                     Error(
-                        error_key="value_error.password.invalid",
-                        error_message="Password is invalid",
+                        error_key="value_error.password.improper",
+                        error_message="Password is improper or too weak",
                         error_loc=["body", "password"],
                     ),
                 ],
@@ -95,6 +95,49 @@ forbidden = {
                 errors=[
                     Error(
                         error_key="forbidden",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}
+
+
+forbidden_or_password_invalid = {
+    "model": ErrorResponse,
+    "description": "Error: Forbidden",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="forbidden",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                    Error(
+                        error_key="password.invalid",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                ],
+            ),
+        },
+    },
+}
+
+
+credentials_invalid = {
+    "model": ErrorResponse,
+    "description": "Error: Forbidden",
+    "content": {
+        "application/json": {
+            "example": ErrorResponse(
+                errors=[
+                    Error(
+                        error_key="credentials.invalid",
                         error_message="Forbidden",
                         error_loc=None,
                     ),

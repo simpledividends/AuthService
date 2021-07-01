@@ -16,3 +16,7 @@ class NotExists(Exception):
 
 class UserNotExists(NotExists):
     pass
+
+
+class PasswordInvalid(Exception):
+    pass

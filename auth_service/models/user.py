@@ -39,3 +39,8 @@ class UserInfo(NewcomerInfo):
 class User(Newcomer):
     verified_at: datetime
     role: UserRole
+
+
+class PasswordPair(BaseModel):
+    password: str
+    new_password: str

@@ -17,12 +17,12 @@ class AppException(Exception):
         super().__init__()
 
 
-class InvalidPasswordError(AppException):
+class ImproperPasswordError(AppException):
     def __init__(
         self,
         status_code: int = HTTPStatus.UNPROCESSABLE_ENTITY,
-        error_key: str = "value_error.password.invalid",
-        error_message: str = "Password is invalid",
+        error_key: str = "value_error.password.improper",
+        error_message: str = "Password is improper",
         error_loc: tp.Optional[tp.Sequence[str]] = ("body", "password"),
     ) -> None:
         super().__init__(status_code, error_key, error_message, error_loc)
