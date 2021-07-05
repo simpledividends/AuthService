@@ -25,6 +25,7 @@ from .config import (
     RESET_PASSWORD_SUBJECT,
     RESET_PASSWORD_TEXT_TEMPLATE,
 )
+from ..models.token import TokenStr
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
 
@@ -56,7 +57,7 @@ class MailService(BaseModel):
     async def send_registration_letter(
         self,
         newcomer: Newcomer,
-        token: str,
+        token: TokenStr,
     ) -> None:
         jinja_env = Environment(
             loader=FileSystemLoader(TEMPLATES_PATH),
@@ -84,7 +85,7 @@ class MailService(BaseModel):
         self,
         user: User,
         new_email: Email,
-        token: str,
+        token: TokenStr,
     ) -> None:
         jinja_env = Environment(
             loader=FileSystemLoader(TEMPLATES_PATH),
@@ -109,7 +110,7 @@ class MailService(BaseModel):
     async def send_forgot_password_letter(
         self,
         user: User,
-        token: str,
+        token: TokenStr,
     ) -> None:
         jinja_env = Environment(
             loader=FileSystemLoader(TEMPLATES_PATH),

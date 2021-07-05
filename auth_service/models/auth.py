@@ -1,10 +1,11 @@
 from pydantic.main import BaseModel
 
 from .common import Email
+from .token import TokenStr
 
 
 class TokenBody(BaseModel):
-    token: str
+    token: TokenStr
 
 
 class TokenPasswordBody(TokenBody):
@@ -21,5 +22,5 @@ class Credentials(BaseModel):
 
 
 class TokenPair(BaseModel):
-    access_token: str
-    refresh_token: str
+    access_token: TokenStr
+    refresh_token: TokenStr
