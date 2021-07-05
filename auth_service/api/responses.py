@@ -52,7 +52,7 @@ conflict_or_email_exists = {
                 errors=[
                     Error(
                         error_key="email.already_exists",
-                        error_message="User with this email is already exists",
+                        error_message="User with this email already exists",
                         error_loc=None,
                     ),
                     Error(
@@ -67,16 +67,16 @@ conflict_or_email_exists = {
 }
 
 
-conflict_register_verify = {
+conflict_email_exists = {
     "model": ErrorResponse,
-    "description": "Error: Conflict when verify new user",
+    "description": "Error: Conflict when email already exists",
     "content": {
         "application/json": {
             "example": ErrorResponse(
                 errors=[
                     Error(
-                        error_key="email.already_verified",
-                        error_message="User with this email is already exists",
+                        error_key="email.already_exists",
+                        error_message="User with this email already exists",
                         error_loc=None,
                     ),
                 ],

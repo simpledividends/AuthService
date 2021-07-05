@@ -532,3 +532,48 @@ class DBService(BaseModel):
             token.created_at,
             token.expired_at,
         )
+
+    async def verify_email(self, token: str) -> User:
+        func = partial(self._verify_email, token=token)
+        user = await self.execute_serializable_transaction(func)
+        return user
+
+    async def _verify_email(self, conn: Connection, token: str) -> User:
+        query = """
+            SELECT user_id, email
+            FROM email_tokens
+            WHERE token = $1::VARCHAR and expired_at > $2::TIMESTAMP
+        """
+        record = await conn.fetchrow(query, token, utc_now())
+        if record is None:
+            raise TokenNotFound()
+
+        n_users = await self._count_users_by_email(conn, record["email"])
+        if n_users > 0:
+            raise UserAlreadyExists()
+
+        await self._drop_email_token(conn, token)
+
+        query = """
+            UPDATE users
+            SET email = $1::VARCHAR
+            WHERE user_id = $2::UUID
+            RETURNING
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+
+        """
+        record = await conn.fetchrow(query, record["email"], record["user_id"])
+        return User(**record)
+
+    @staticmethod
+    async def _drop_email_token(conn: Connection, token: str) -> None:
+        query = """
+            DELETE FROM email_tokens
+            WHERE token = $1::VARCHAR
+        """
+        await conn.execute(query, token)

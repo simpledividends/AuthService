@@ -342,12 +342,8 @@ def test_register_verify_success(
     assert resp_json == expected_response
 
     # Check DB
-    assert_all_tables_are_empty(
-        db_session,
-        [UserTable, NewcomerTable, RegistrationTokenTable],
-    )
+    assert_all_tables_are_empty(db_session, [UserTable, NewcomerTable])
     assert len(db_session.query(NewcomerTable).all()) == 1
-    assert len(db_session.query(RegistrationTokenTable).all()) == 0
     users = db_session.query(UserTable).all()
     assert len(users) == 1
     user = users[0]
@@ -409,4 +405,4 @@ def test_register_verify_user_already_exists(
             json={"token": token_string},
         )
     assert resp.status_code == HTTPStatus.CONFLICT
-    assert resp.json()["errors"][0]["error_key"] == "email.already_verified"
+    assert resp.json()["errors"][0]["error_key"] == "email.already_exists"
