@@ -15,7 +15,7 @@ from auth_service.db.exceptions import (
     TooManyNewcomersWithSameEmail,
     TooManyPasswordTokens,
     UserAlreadyExists,
-    UserNotExists,
+    UserNotExists, TransactionError,
 )
 from auth_service.log import app_logger
 from auth_service.models.token import (
@@ -72,7 +72,7 @@ class DBService(BaseModel):
                         result = await func(conn)
                 except SerializationError:
                     if attempt == self.n_transaction_retries - 1:
-                        raise
+                        raise TransactionError
                     await asyncio.sleep(interval)
                     interval *= self.transaction_retry_interval_factor
                 else:
