@@ -649,3 +649,38 @@ class DBService(BaseModel):
         """
         n_tokens = await conn.fetchval(query, user_id, utc_now())
         return n_tokens
+
+    async def update_password_by_token(
+        self,
+        token: str,
+        password: str,
+    ) -> None:
+        func = partial(
+            self._update_password_by_token,
+            token=token,
+            password=password,
+        )
+        user = await self.execute_serializable_transaction(func)
+        return user
+
+    async def _update_password_by_token(
+        self,
+        conn: Connection,
+        token: str,
+        password: str,
+    ):
+        get_query = """
+            DELETE FROM password_tokens
+            WHERE token = $1::VARCHAR AND expired_at > $2::TIMESTAMP
+            RETURNING user_id
+        """
+        user_id = await conn.fetchval(get_query, token, utc_now())
+        if user_id is None:
+            raise TokenNotFound()
+
+        update_query = """
+            UPDATE users
+            SET password = $1::VARCHAR
+            WHERE user_id = $2::UUID
+        """
+        await conn.execute(update_query, password, user_id)

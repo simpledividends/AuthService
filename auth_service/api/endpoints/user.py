@@ -27,7 +27,7 @@ from auth_service.db.exceptions import (
     UserAlreadyExists,
     UserNotExists,
 )
-from auth_service.models.auth import EmailBody, TokenBody
+from auth_service.models.auth import EmailBody, TokenBody, TokenPasswordBody
 from auth_service.models.user import (
     ChangeEmailRequest,
     ChangePasswordRequest,
@@ -222,6 +222,37 @@ async def forgot_password(
         token=token_string,
     )
     return response
+
+
+@router.post(
+    path="/auth/password/reset",
+    tags=["User"],
+    status_code=HTTPStatus.OK,
+    responses={
+        403: responses.forbidden,
+        422: responses.unprocessable_entity_or_password_improper,
+    }
+)
+async def reset_password(
+    request: Request,
+    verification: TokenPasswordBody,
+) -> JSONResponse:
+    security_service = get_security_service(request.app)
+    if not security_service.is_password_proper(verification.password):
+        raise ImproperPasswordError()
+
+    hashed_token = security_service.hash_token_string(verification.token)
+
+    db_service = get_db_service(request.app)
+    try:
+        await db_service.update_password_by_token(
+            hashed_token,
+            security_service.hash_password(verification.password),
+        )
+    except TokenNotFound:
+        raise ForbiddenException()
+
+    return create_response(status_code=HTTPStatus.OK)
 
 
 @router.get(
