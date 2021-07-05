@@ -9,9 +9,15 @@ from auth_service.db.exceptions import (
     PasswordInvalid,
     TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
+    TooManyPasswordTokens,
     UserAlreadyExists,
 )
-from auth_service.db.models import EmailTokenTable, NewcomerTable, UserTable
+from auth_service.db.models import (
+    EmailTokenTable,
+    NewcomerTable,
+    PasswordTokenTable,
+    UserTable,
+)
 from auth_service.db.service import DBService
 from auth_service.models.common import Email
 from auth_service.models.user import NewcomerFull
@@ -221,3 +227,42 @@ async def test_verify_same_email_with_parallel_requests(
         await db_service.cleanup()
 
     assert sum(results) == 1
+
+
+async def test_many_forgot_password_parallel_requests(
+    service_config: ServiceConfig,
+    db_service: DBService,
+    db_session: orm.Session,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+    max_password_tokens = (
+        service_config
+        .db_config
+        .max_active_user_password_tokens
+    )
+
+    user = make_db_user()
+    create_db_object(user)
+
+    password_tokens = [
+        security_service.make_password_token(user.user_id)[1]
+        for _ in range(max_password_tokens * 3)
+    ]
+    tasks = [
+        db_service.create_password_token(token)
+        for token in password_tokens
+    ]
+
+    await db_service.setup()
+    try:
+        await asyncio.gather(*tasks)
+    except TooManyPasswordTokens:
+        pass
+    finally:
+        await db_service.cleanup()
+
+    assert (
+        len(db_session.query(PasswordTokenTable).all())
+        == max_password_tokens
+    )

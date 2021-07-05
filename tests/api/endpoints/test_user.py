@@ -11,15 +11,24 @@ from starlette.testclient import TestClient
 from auth_service.db.models import (
     AccessTokenTable,
     EmailTokenTable,
+    PasswordTokenTable,
     SessionTable,
     UserTable,
 )
-from auth_service.mail.config import CHANGE_EMAIL_SENDER, CHANGE_EMAIL_SUBJECT
+from auth_service.mail.config import (
+    CHANGE_EMAIL_SENDER,
+    CHANGE_EMAIL_SUBJECT,
+    RESET_PASSWORD_SENDER,
+    RESET_PASSWORD_SUBJECT,
+)
 from auth_service.models.user import User, UserRole
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig
 from auth_service.utils import utc_now
-from tests.constants import CHANGE_EMAIL_LINK_TEMPLATE
+from tests.constants import (
+    CHANGE_EMAIL_LINK_TEMPLATE,
+    RESET_PASSWORD_LINK_TEMPLATE,
+)
 from tests.helpers import (
     DBObjectCreator,
     FakeMailgunServer,
@@ -29,6 +38,7 @@ from tests.helpers import (
     make_db_registration_token,
     make_db_user,
     make_email_token,
+    make_password_token,
 )
 from tests.utils import ApproxDatetime
 
@@ -36,6 +46,7 @@ ME_PATH = "/auth/users/me"
 MY_PASSWORD = "/auth/users/me/password"
 MY_EMAIL = "/auth/users/me/email"
 VERIFY_EMAIL_PATH = "/auth/email/verify"
+FORGOT_PASSWORD_PATH = "/auth/password/forgot"
 USER_PATH_TEMPLATE = "/auth/users/{user_id}"
 
 
@@ -217,7 +228,7 @@ def test_patch_my_password_with_weak_new_password(
     )
 
 
-def test_change_email_success(
+def test_patch_email_success(
     client: TestClient,
     create_db_object: DBObjectCreator,
     security_service: SecurityService,
@@ -527,7 +538,7 @@ def test_register_verify_incorrect_token(
     assert resp.status_code == HTTPStatus.FORBIDDEN
 
 
-def test_register_verify_user_already_exists(
+def test_email_verify_user_already_exists(
     client: TestClient,
     security_service: SecurityService,
     create_db_object: DBObjectCreator,
@@ -550,6 +561,152 @@ def test_register_verify_user_already_exists(
         )
     assert resp.status_code == HTTPStatus.CONFLICT
     assert resp.json()["errors"][0]["error_key"] == "email.already_exists"
+
+
+def test_forgot_password_success(
+    client: TestClient,
+    create_db_object: DBObjectCreator,
+    security_service: SecurityService,
+    db_session: orm.Session,
+    service_config: ServiceConfig,
+    fake_mailgun_server: FakeMailgunServer,
+):
+    user = make_db_user()
+    create_db_object(user)
+
+    now = utc_now()
+    with client:
+        resp = client.post(
+            FORGOT_PASSWORD_PATH,
+            json={"email": " " + user.email.capitalize() + "   "},
+        )
+
+    # Check response
+    assert resp.status_code == HTTPStatus.ACCEPTED
+    assert resp.json() == {}
+
+    # # Check DB content
+    assert_all_tables_are_empty(db_session, [UserTable, PasswordTokenTable])
+    assert len(db_session.query(UserTable).all()) == 1
+    password_tokens = db_session.query(PasswordTokenTable).all()
+    assert len(password_tokens) == 1
+    password_token = password_tokens[0]
+
+    assert password_token.user_id == user.user_id
+    assert password_token.created_at == ApproxDatetime(now)
+    assert password_token.expired_at == ApproxDatetime(
+        now
+        + timedelta(
+            seconds=service_config
+            .security_config
+            .password_token_lifetime_seconds,
+        )
+    )
+
+    # Check sent mail
+    assert len(fake_mailgun_server.requests) == 1
+    send_mail_request = fake_mailgun_server.requests[0]
+    assert send_mail_request.authorization == {
+        "username": "api",
+        "password": service_config.mail_config.mailgun_config.mailgun_api_key,
+    }
+    assert (
+        send_mail_request.form["from"]
+        == RESET_PASSWORD_SENDER.format(
+            domain=service_config.mail_config.mail_domain
+        )
+    )
+    assert send_mail_request.form["to"] == user.email
+    assert send_mail_request.form["subject"] == RESET_PASSWORD_SUBJECT
+
+    link_pattern = (
+        RESET_PASSWORD_LINK_TEMPLATE
+        .replace("{token}", r"(\w+)")
+        .replace("?", r"\?")
+    )
+    text_token = re.findall(link_pattern, send_mail_request.form["text"])[0]
+    html_token = re.findall(link_pattern, send_mail_request.form["html"])[0]
+    assert text_token == html_token
+    assert (
+        security_service.hash_token_string(text_token)
+        == password_token.token
+    )
+
+
+def test_forgot_password_with_invalid_email(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> None:
+
+    with client:
+        resp = client.post(
+            FORGOT_PASSWORD_PATH,
+            json={"email": "not_a_email"},
+        )
+
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert resp.json()["errors"][0]["error_key"] == "value_error.email"
+
+
+def test_forgot_password_when_email_not_exists(
+    client: TestClient,
+    db_session: orm.Session,
+    fake_mailgun_server: FakeMailgunServer,
+):
+    with client:
+        resp = client.post(
+            FORGOT_PASSWORD_PATH,
+            json={"email": "a@b.c"},
+        )
+
+    assert resp.status_code == HTTPStatus.ACCEPTED
+    assert resp.json() == {}
+
+    assert_all_tables_are_empty(db_session)
+    assert len(fake_mailgun_server.requests) == 0
+
+
+def test_forgot_password_when_too_many_requests(
+    client: TestClient,
+    service_config: ServiceConfig,
+    create_db_object: DBObjectCreator,
+    security_service: SecurityService,
+    db_session: orm.Session,
+    fake_mailgun_server: FakeMailgunServer,
+):
+    max_password_tokens = (
+        service_config
+        .db_config
+        .max_active_user_password_tokens
+    )
+
+    user = make_db_user()
+    create_db_object(user)
+
+    # Add expired token to check that it does not affect
+    expired_token = make_password_token(
+        user_id=user.user_id,
+        expired_at=utc_now() - timedelta(1),
+    )
+    create_db_object(expired_token)
+
+    for i in range(max_password_tokens + 1):
+        with client:
+            resp = client.post(
+                FORGOT_PASSWORD_PATH,
+                json={"email": user.email},
+            )
+        assert resp.status_code == HTTPStatus.ACCEPTED
+
+        n_tokens = len(db_session.query(PasswordTokenTable).all())
+        n_mails = len(fake_mailgun_server.requests)
+        if i < max_password_tokens:
+            assert n_tokens == i + 2
+            assert n_mails == i + 1
+        else:
+            assert n_tokens == i + 1
+            assert n_mails == i
 
 
 def test_get_user_success(

@@ -13,3 +13,12 @@ CHANGE_EMAIL_TEXT_TEMPLATE = """
 Ссылка для подтверждения email: {link}
 """
 CHANGE_EMAIL_HTML = "change_email.html"
+
+RESET_PASSWORD_SUBJECT = "Сброс пароля"  # nosec
+RESET_PASSWORD_SENDER = "noreply@{domain}"  # nosec
+RESET_PASSWORD_TEXT_TEMPLATE = (   # nosec
+    """
+        Ссылка для Сброса пароля: {link}
+    """
+)
+RESET_PASSWORD_HTML = "reset_password.html"  # nosec

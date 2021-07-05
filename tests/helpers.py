@@ -14,6 +14,7 @@ from auth_service.db.models import (
     Base,
     EmailTokenTable,
     NewcomerTable,
+    PasswordTokenTable,
     RefreshTokenTable,
     RegistrationTokenTable,
     SessionTable,
@@ -129,6 +130,20 @@ def make_email_token(
         token=token,
         user_id=str(user_id or uuid4()),
         email=email,
+        created_at=created_at,
+        expired_at=expired_at or utc_now() + timedelta(days=10),
+    )
+
+
+def make_password_token(
+    token: str = "hashed_token",
+    user_id: tp.Optional[UUID] = None,
+    created_at: datetime = datetime(2021, 6, 12),
+    expired_at: tp.Optional[datetime] = None,
+) -> EmailTokenTable:
+    return PasswordTokenTable(
+        token=token,
+        user_id=str(user_id or uuid4()),
         created_at=created_at,
         expired_at=expired_at or utc_now() + timedelta(days=10),
     )

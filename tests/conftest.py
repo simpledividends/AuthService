@@ -26,6 +26,7 @@ from tests.constants import (
     MAILGUN_API_KEY,
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
+    RESET_PASSWORD_LINK_TEMPLATE,
 )
 from tests.helpers import (
     DBObjectCreator,
@@ -133,6 +134,10 @@ def set_env(mailgun_server_url: str) -> tp.Generator[None, None, None]:
     monkeypatch.setenv(
         "CHANGE_EMAIL_LINK_TEMPLATE",
         CHANGE_EMAIL_LINK_TEMPLATE,
+    )
+    monkeypatch.setenv(
+        "RESET_PASSWORD_LINK_TEMPLATE",
+        RESET_PASSWORD_LINK_TEMPLATE,
     )
     monkeypatch.setenv("MAILGUN_API_KEY", MAILGUN_API_KEY)
     monkeypatch.setenv("MAILGUN_URL", mailgun_server_url)

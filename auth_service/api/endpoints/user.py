@@ -23,10 +23,11 @@ from auth_service.db.exceptions import (
     TokenNotFound,
     TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
+    TooManyPasswordTokens,
     UserAlreadyExists,
     UserNotExists,
 )
-from auth_service.models.auth import TokenBody
+from auth_service.models.auth import EmailBody, TokenBody
 from auth_service.models.user import (
     ChangeEmailRequest,
     ChangePasswordRequest,
@@ -184,6 +185,43 @@ async def verify_email_change(
         )
 
     return create_response(status_code=HTTPStatus.OK)
+
+
+@router.post(
+    path="/auth/password/forgot",
+    tags=["User"],
+    status_code=HTTPStatus.ACCEPTED,
+    responses={
+        422: responses.unprocessable_entity,
+    }
+)
+async def forgot_password(
+    request: Request,
+    email_body: EmailBody,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
+    response = create_response(status_code=HTTPStatus.ACCEPTED)
+    db_service = get_db_service(request.app)
+    try:
+        user = await db_service.get_user_by_email(email_body.email)
+    except UserNotExists:
+        return response
+
+    security_service = get_security_service(request.app)
+    token_string, token = security_service.make_password_token(user.user_id)
+
+    try:
+        await db_service.create_password_token(token)
+    except (UserNotExists, TooManyPasswordTokens):
+        return response
+
+    mail_service = get_mail_service(request.app)
+    background_tasks.add_task(
+        mail_service.send_forgot_password_letter,
+        user=user,
+        token=token_string,
+    )
+    return response
 
 
 @router.get(

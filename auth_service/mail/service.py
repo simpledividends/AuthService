@@ -20,6 +20,10 @@ from .config import (
     REGISTRATION_EMAIL_SUBJECT,
     REGISTRATION_EMAIL_TEXT_TEMPLATE,
     REGISTRATION_MAIL_HTML,
+    RESET_PASSWORD_HTML,
+    RESET_PASSWORD_SENDER,
+    RESET_PASSWORD_SUBJECT,
+    RESET_PASSWORD_TEXT_TEMPLATE,
 )
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
@@ -37,6 +41,7 @@ class MailService(BaseModel):
     mail_domain: str
     register_verify_link_template: str
     change_email_link_template: str
+    reset_password_link_template: str
 
     async def send_mail(
         self,
@@ -97,6 +102,31 @@ class MailService(BaseModel):
             from_user=CHANGE_EMAIL_SENDER.format(domain=self.mail_domain),
             email=new_email,
             subject=CHANGE_EMAIL_SUBJECT,
+            text=text,
+            html=rendered,
+        )
+
+    async def send_forgot_password_letter(
+        self,
+        user: User,
+        token: str,
+    ) -> None:
+        jinja_env = Environment(
+            loader=FileSystemLoader(TEMPLATES_PATH),
+            autoescape=True,
+        )
+        template = jinja_env.get_template(RESET_PASSWORD_HTML)
+        link = self.reset_password_link_template.format(token=token)
+        context = {
+            "user": user,
+            "link": link,
+        }
+        rendered = template.render(context)
+        text = RESET_PASSWORD_TEXT_TEMPLATE.format(link=link)
+        await self.send_mail(
+            from_user=RESET_PASSWORD_SENDER.format(domain=self.mail_domain),
+            email=user.email,
+            subject=RESET_PASSWORD_SUBJECT,
             text=text,
             html=rendered,
         )
