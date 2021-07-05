@@ -152,7 +152,7 @@ def test_logout_only_current_user(
         create_db_object,
     )
 
-    other_user_id, _ = create_authorized_user(
+    other_user, _ = create_authorized_user(
         security_service,
         create_db_object,
     )
@@ -172,7 +172,7 @@ def test_logout_only_current_user(
     other_session = (
         db_session
         .query(SessionTable)
-        .filter_by(user_id=other_user_id)
+        .filter_by(user_id=other_user.user_id)
         .first()
     )
     assert other_session.finished_at is None

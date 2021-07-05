@@ -32,6 +32,10 @@ class Newcomer(NewcomerBase):
     created_at: datetime
 
 
+class NewcomerFull(Newcomer):
+    hashed_password: str
+
+
 class UserInfo(NewcomerInfo):
     pass
 
@@ -41,6 +45,11 @@ class User(Newcomer):
     role: UserRole
 
 
-class PasswordPair(BaseModel):
+class ChangePasswordRequest(BaseModel):
     password: str
     new_password: str
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: Email
+    password: str

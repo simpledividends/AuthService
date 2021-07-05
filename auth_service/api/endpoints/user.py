@@ -2,6 +2,7 @@ from http import HTTPStatus
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
+from starlette.background import BackgroundTasks
 from starlette.responses import JSONResponse
 
 from auth_service.api import responses
@@ -10,10 +11,27 @@ from auth_service.api.exceptions import (
     ForbiddenException,
     ImproperPasswordError,
     NotFoundException,
+    UserConflictException,
 )
-from auth_service.api.services import get_db_service, get_security_service
-from auth_service.db.exceptions import PasswordInvalid, UserNotExists
-from auth_service.models.user import PasswordPair, User, UserInfo, UserRole
+from auth_service.api.services import (
+    get_db_service,
+    get_mail_service,
+    get_security_service,
+)
+from auth_service.db.exceptions import (
+    PasswordInvalid,
+    TooManyChangeSameEmailRequests,
+    TooManyNewcomersWithSameEmail,
+    UserAlreadyExists,
+    UserNotExists,
+)
+from auth_service.models.user import (
+    ChangeEmailRequest,
+    ChangePasswordRequest,
+    User,
+    UserInfo,
+    UserRole,
+)
 from auth_service.response import create_response
 
 router = APIRouter()
@@ -65,7 +83,7 @@ async def patch_me(
 )
 async def patch_my_password(
     request: Request,
-    password_pair: PasswordPair,
+    password_pair: ChangePasswordRequest,
     user: User = Depends(get_request_user),
 ) -> JSONResponse:
     security_service = get_security_service(request.app)
@@ -85,6 +103,53 @@ async def patch_my_password(
     except PasswordInvalid:
         raise ForbiddenException(error_key="password.invalid")
 
+    return create_response(status_code=HTTPStatus.OK)
+
+
+@router.patch(
+    path="/auth/users/me/email",
+    tags=["User"],
+    status_code=HTTPStatus.OK,
+    responses={
+        403: responses.forbidden_or_password_invalid,
+        409: responses.conflict_or_email_exists,
+        422: responses.unprocessable_entity,
+    }
+)
+async def patch_my_email(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    data: ChangeEmailRequest,
+    user: User = Depends(get_request_user),
+) -> JSONResponse:
+    db_service = get_db_service(request.app)
+    security_service = get_security_service(request.app)
+
+    _, hashed_pass = await db_service.get_user_with_password(user.email)
+    if not security_service.is_password_correct(data.password, hashed_pass):
+        raise ForbiddenException(error_key="password.invalid")
+
+    token_string, token = security_service.make_change_email_token(
+        user.user_id,
+        data.new_email,
+    )
+    try:
+        await db_service.add_change_email_token(token)
+    except UserAlreadyExists:
+        raise UserConflictException(
+            error_key="email.already_exists",
+            error_message="User with given email is already exists",
+        )
+    except (TooManyNewcomersWithSameEmail, TooManyChangeSameEmailRequests):
+        raise UserConflictException()
+
+    mail_service = get_mail_service(request.app)
+    background_tasks.add_task(
+        mail_service.send_change_email_letter,
+        user=user,
+        new_email=data.new_email,
+        token=token_string,
+    )
     return create_response(status_code=HTTPStatus.OK)
 
 

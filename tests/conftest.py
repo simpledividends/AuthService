@@ -22,6 +22,7 @@ from auth_service.db.service import DBService
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig, get_config
 from tests.constants import (
+    CHANGE_EMAIL_LINK_TEMPLATE,
     MAILGUN_API_KEY,
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
@@ -128,6 +129,10 @@ def set_env(mailgun_server_url: str) -> tp.Generator[None, None, None]:
     monkeypatch.setenv(
         "REGISTER_VERIFY_LINK_TEMPLATE",
         REGISTER_VERIFY_LINK_TEMPLATE,
+    )
+    monkeypatch.setenv(
+        "CHANGE_EMAIL_LINK_TEMPLATE",
+        CHANGE_EMAIL_LINK_TEMPLATE,
     )
     monkeypatch.setenv("MAILGUN_API_KEY", MAILGUN_API_KEY)
     monkeypatch.setenv("MAILGUN_URL", mailgun_server_url)

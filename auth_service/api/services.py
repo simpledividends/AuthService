@@ -26,17 +26,13 @@ def make_db_service(config: ServiceConfig) -> DBService:
     pool_config = db_config.pop("db_pool_config")
     pool_config["dsn"] = pool_config.pop("db_url")
     pool = create_pool(**pool_config)
-    service = DBService(
-        pool=pool,
-        max_newcomers_with_same_email=config.max_newcomers_with_same_email,
-        **db_config,
-    )
+    service = DBService(pool=pool, **db_config)
     return service
 
 
 def make_security_service(config: ServiceConfig) -> SecurityService:
     security_config = config.security_config.dict()
-    for token_type in ("registration", "access", "refresh"):
+    for token_type in ("registration", "access", "refresh", "change_email"):
         security_config[f"{token_type}_token_lifetime"] = timedelta(
             seconds=security_config.pop(f"{token_type}_token_lifetime_seconds")
         )

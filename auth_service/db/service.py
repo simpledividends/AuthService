@@ -11,6 +11,7 @@ from auth_service.db.exceptions import (
     NotExists,
     PasswordInvalid,
     TokenNotFound,
+    TooManyChangeSameEmailRequests,
     TooManyNewcomersWithSameEmail,
     UserAlreadyExists,
     UserNotExists,
@@ -18,12 +19,13 @@ from auth_service.db.exceptions import (
 from auth_service.log import app_logger
 from auth_service.models.token import (
     AccessToken,
+    ChangeEmailToken,
     RefreshToken,
     RegistrationToken,
 )
 from auth_service.models.user import (
     Newcomer,
-    NewcomerRegistered,
+    NewcomerFull,
     User,
     UserInfo,
     UserRole,
@@ -35,7 +37,8 @@ T = tp.TypeVar("T")
 
 class DBService(BaseModel):
     pool: Pool
-    max_newcomers_with_same_email: int
+    max_active_newcomers_with_same_email: int
+    max_active_requests_change_same_email: int
     n_transaction_retries: int
     transaction_retry_interval_first: float
     transaction_retry_interval_factor: float
@@ -73,28 +76,42 @@ class DBService(BaseModel):
                     break
         return result
 
-    async def create_newcomer(self, newcomer: NewcomerRegistered) -> Newcomer:
-        func = partial(self._create_newcomer, newcomer=newcomer)
+    async def create_newcomer(
+        self,
+        newcomer: NewcomerFull,
+        token: RegistrationToken,
+    ) -> Newcomer:
+        func = partial(self._create_newcomer, newcomer=newcomer, token=token)
         created = await self.execute_serializable_transaction(func)
         return created
 
     async def _create_newcomer(
         self,
         conn: Connection,
-        newcomer: NewcomerRegistered,
+        newcomer: NewcomerFull,
+        token: RegistrationToken,
     ) -> Newcomer:
-        email = newcomer.email
+        await self._check_email_available(conn, newcomer.email)
+        created = await self._insert_newcomer(conn, newcomer)
+        await self._add_registration_token(conn, token)
+        return created
 
+    async def _check_email_available(
+        self,
+        conn: Connection,
+        email: str,
+    ) -> None:
         n_users = await self._count_users_by_email(conn, email)
         if n_users > 0:
             raise UserAlreadyExists()
 
-        n_newcomers = await self._count_newcomers_by_email(conn, email)
-        if n_newcomers >= self.max_newcomers_with_same_email:
+        n_newcomers = await self._count_active_newcomers_by_email(conn, email)
+        if n_newcomers >= self.max_active_newcomers_with_same_email:
             raise TooManyNewcomersWithSameEmail()
 
-        created = await self._insert_newcomer(conn, newcomer)
-        return created
+        n_email_changes = await self._count_email_changes(conn, email)
+        if n_email_changes >= self.max_active_requests_change_same_email:
+            raise TooManyChangeSameEmailRequests()
 
     @staticmethod
     async def _count_users_by_email(conn: Connection, email: str) -> int:
@@ -107,19 +124,33 @@ class DBService(BaseModel):
         return n_users
 
     @staticmethod
-    async def _count_newcomers_by_email(conn: Connection, email: str) -> int:
+    async def _count_active_newcomers_by_email(
+        conn: Connection,
+        email: str,
+    ) -> int:
         query = """
-                SELECT count(*)
-                FROM newcomers
-                WHERE email = $1::VARCHAR;
-            """
-        n_newcomers = await conn.fetchval(query, email)
+            SELECT count(*)
+            FROM newcomers
+                JOIN registration_tokens rt on newcomers.user_id = rt.user_id
+            WHERE email = $1::VARCHAR AND rt.expired_at > $2::TIMESTAMP;
+        """
+        n_newcomers = await conn.fetchval(query, email, utc_now())
         return n_newcomers
+
+    @staticmethod
+    async def _count_email_changes(conn: Connection, email: str) -> int:
+        query = """
+            SELECT count(*)
+            FROM email_tokens
+            WHERE email = $1::VARCHAR AND expired_at > $2::TIMESTAMP;
+        """
+        n_changes = await conn.fetchval(query, email, utc_now())
+        return n_changes
 
     @staticmethod
     async def _insert_newcomer(
         conn: Connection,
-        newcomer: NewcomerRegistered,
+        newcomer: NewcomerFull,
     ) -> Newcomer:
         query = """
             INSERT INTO newcomers
@@ -141,15 +172,19 @@ class DBService(BaseModel):
         """
         record = await conn.fetchrow(
             query,
-            uuid4(),
+            newcomer.user_id,
             newcomer.name,
             newcomer.email,
-            newcomer.password,
-            utc_now(),
+            newcomer.hashed_password,
+            newcomer.created_at,
         )
         return Newcomer(**record)
 
-    async def save_registration_token(self, token: RegistrationToken) -> None:
+    @staticmethod
+    async def _add_registration_token(
+        conn: Connection,
+        token: RegistrationToken,
+    ) -> None:
         query = """
             INSERT INTO registration_tokens
                 (token, user_id, created_at, expired_at)
@@ -162,7 +197,7 @@ class DBService(BaseModel):
                 )
             ;
         """
-        await self.pool.execute(
+        await conn.execute(
             query,
             token.token,
             token.user_id,
@@ -183,6 +218,8 @@ class DBService(BaseModel):
         n_users = await self._count_users_by_email(conn, newcomer["email"])
         if n_users > 0:
             raise UserAlreadyExists()
+
+        await self._drop_register_token(conn, token)
 
         query = """
             INSERT INTO users
@@ -224,13 +261,21 @@ class DBService(BaseModel):
         token: str,
     ) -> tp.Optional[Record]:
         query = """
-            SELECT *
-            FROM newcomers
-                JOIN registration_tokens rt on newcomers.user_id = rt.user_id
+            SELECT n.*
+            FROM newcomers n
+                JOIN registration_tokens rt on n.user_id = rt.user_id
             WHERE token = $1::VARCHAR and expired_at > $2::TIMESTAMP
         """
         record = await conn.fetchrow(query, token, utc_now())
         return record
+
+    @staticmethod
+    async def _drop_register_token(conn: Connection, token: str) -> None:
+        query = """
+            DELETE FROM registration_tokens
+            WHERE token = $1::VARCHAR
+        """
+        await conn.execute(query, token)
 
     async def get_user_with_password(self, email: str) -> tp.Tuple[UUID, str]:
         query = """
@@ -454,3 +499,36 @@ class DBService(BaseModel):
             WHERE user_id = $2::UUID
         """
         await conn.fetchval(update_query, new_password, user_id)
+
+    async def add_change_email_token(self, token: ChangeEmailToken) -> None:
+        func = partial(self._add_change_email_token, token=token)
+        await self.execute_serializable_transaction(func)
+
+    async def _add_change_email_token(
+        self,
+        conn: Connection,
+        token: ChangeEmailToken,
+    ) -> None:
+        await self._check_email_available(conn, token.email)
+
+        query = """
+            INSERT INTO email_tokens
+                (token, user_id, email, created_at, expired_at)
+            VALUES
+                (
+                    $1::VARCHAR
+                    , $2::UUID
+                    , $3::VARCHAR
+                    , $4::TIMESTAMP
+                    , $5::TIMESTAMP
+                )
+            ;
+        """
+        await conn.execute(
+            query,
+            token.token,
+            token.user_id,
+            token.email,
+            token.created_at,
+            token.expired_at,
+        )
