@@ -23,7 +23,8 @@ from auth_service.db.models import (
 from auth_service.models.user import UserRole
 from auth_service.security import SecurityService
 from auth_service.utils import utc_now
-from tests.utils import random_email
+
+from .utils import random_email
 
 DBObjectCreator = tp.Callable[[Base], None]
 

@@ -22,18 +22,15 @@ from auth_service.db.models import Base
 from auth_service.db.service import DBService
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig, get_config
-from tests.constants import (
+
+from .constants import (
     CHANGE_EMAIL_LINK_TEMPLATE,
     MAILGUN_API_KEY,
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
     RESET_PASSWORD_LINK_TEMPLATE,
 )
-from tests.helpers import (
-    DBObjectCreator,
-    FakeMailgunServer,
-    check_access_forbidden,
-)
+from .helpers import DBObjectCreator, FakeMailgunServer, check_access_forbidden
 
 CURRENT_DIR = Path(__file__).parent
 ALEMBIC_INI_PATH = CURRENT_DIR.parent / "alembic.ini"

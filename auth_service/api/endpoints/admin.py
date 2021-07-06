@@ -1,16 +1,15 @@
 from http import HTTPStatus
 from uuid import UUID
 
-from fastapi import Depends, APIRouter
+from fastapi import APIRouter, Depends
 from starlette.requests import Request
 
 from auth_service.api import responses
-from auth_service.api.auth import get_request_user, get_request_admin
+from auth_service.api.auth import get_request_admin
 from auth_service.api.exceptions import NotFoundException
 from auth_service.api.services import get_db_service
 from auth_service.db.exceptions import UserNotExists
 from auth_service.models.user import User, UserRole
-
 
 router = APIRouter()
 

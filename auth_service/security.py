@@ -8,16 +8,17 @@ from passlib import hash as phash
 from pydantic.main import BaseModel
 from zxcvbn import zxcvbn
 
-from auth_service.models.common import Email
-from auth_service.models.token import (
+from .models.common import Email
+from .models.token import (
     AccessToken,
     ChangeEmailToken,
     PasswordToken,
     RefreshToken,
     RegistrationToken,
-    Token, TokenStr,
+    Token,
+    TokenStr,
 )
-from auth_service.utils import utc_now
+from .utils import utc_now
 
 ALPHABET = string.ascii_letters + string.digits
 TOKEN_LENGTH = 64

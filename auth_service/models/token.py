@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 from .common import Email
 
-
 TokenStr = str
 
 

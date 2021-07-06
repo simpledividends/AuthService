@@ -4,10 +4,9 @@ from uuid import uuid4
 
 from starlette.testclient import TestClient
 
-from auth_service.models.user import UserRole, User
+from auth_service.models.user import User, UserRole
 from auth_service.security import SecurityService
 from tests.helpers import DBObjectCreator, create_authorized_user, make_db_user
-
 
 USER_PATH_TEMPLATE = "/users/{user_id}"
 

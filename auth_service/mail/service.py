@@ -8,9 +8,10 @@ from aiohttp import BasicAuth
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, HttpUrl
 
+from auth_service.models.common import Email
+from auth_service.models.token import TokenStr
 from auth_service.models.user import Newcomer, User
 
-from ..models.common import Email
 from .config import (
     CHANGE_EMAIL_HTML,
     CHANGE_EMAIL_SENDER,
@@ -25,7 +26,6 @@ from .config import (
     RESET_PASSWORD_SUBJECT,
     RESET_PASSWORD_TEXT_TEMPLATE,
 )
-from ..models.token import TokenStr
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
 
