@@ -76,6 +76,7 @@ def test_get_user_not_found_when_not_exists(
     _, access_token = create_authorized_user(
         security_service,
         create_db_object,
+        user_role=UserRole.admin,
     )
 
     with client:
@@ -94,6 +95,7 @@ def test_get_user_422_when_not_uuid(
     _, access_token = create_authorized_user(
         security_service,
         create_db_object,
+        user_role=UserRole.admin,
     )
 
     with client:

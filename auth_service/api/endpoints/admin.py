@@ -27,11 +27,8 @@ router = APIRouter()
 async def get_user(
     request: Request,
     user_id: UUID,
-    user: User = Depends(get_request_admin),
+    _: User = Depends(get_request_admin),
 ) -> User:
-    if user.role != UserRole.admin:
-        raise NotFoundException()
-
     db_service = get_db_service(request.app)
     try:
         user = await db_service.get_user(user_id)
