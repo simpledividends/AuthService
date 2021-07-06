@@ -114,7 +114,7 @@ def test_patch_me_success(
         ({"email": "a@b.c"}, "value_error.missing"),
         ({"name": {"a": "b"}}, "type_error.str"),
         ({"name": ""}, "value_error.any_str.min_length"),
-        ({"name": "a" * 51}, "value_error.any_str.max_length"),
+        ({"name": "a" * 129}, "value_error.any_str.max_length"),
     )
 )
 def test_patch_me_validation_errors(
@@ -335,10 +335,15 @@ def test_patch_my_email_with_invalid_password(
     assert resp.json()["errors"][0]["error_key"] == "password.invalid"
 
 
+@pytest.mark.parametrize(
+    "new_email",
+    ("new e.mail", "", "a@b.c" + "c" * 124)
+)
 def test_patch_my_email_with_invalid_email(
     client: TestClient,
     security_service: SecurityService,
     create_db_object: DBObjectCreator,
+    new_email: str,
 ) -> None:
     _, access_token = create_authorized_user(
         security_service,
@@ -349,7 +354,7 @@ def test_patch_my_email_with_invalid_email(
         resp = client.patch(
             MY_EMAIL,
             headers={"Authorization": f"Bearer {access_token}"},
-            json={"password": "pass", "new_email": "new e.mail"},
+            json={"password": "pass", "new_email": new_email},
         )
 
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY

@@ -1,6 +1,6 @@
 import typing as tp
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from pydantic.networks import EmailStr
 
 
@@ -18,4 +18,7 @@ class Email(EmailStr):
 
     @classmethod
     def validate(cls, value: str) -> str:
-        return super().validate(value).strip().lower()
+        prepared = super().validate(value).strip().lower()
+        if len(prepared) > 128:
+            raise ValueError("Email length must be less or equal to 128")
+        return prepared
