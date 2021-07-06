@@ -38,7 +38,7 @@ router = APIRouter()
 
 
 @router.get(
-    path="/auth/users/me",
+    path="/users/me",
     tags=["User"],
     status_code=HTTPStatus.OK,
     response_model=User,
@@ -53,7 +53,7 @@ def get_me(
 
 
 @router.patch(
-    path="/auth/users/me",
+    path="/users/me",
     tags=["User"],
     status_code=HTTPStatus.OK,
     response_model=User,
@@ -73,7 +73,7 @@ async def patch_me(
 
 
 @router.patch(
-    path="/auth/users/me/password",
+    path="/users/me/password",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -107,7 +107,7 @@ async def patch_my_password(
 
 
 @router.patch(
-    path="/auth/users/me/email",
+    path="/users/me/email",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -154,7 +154,7 @@ async def patch_my_email(
 
 
 @router.post(
-    path="/auth/email/verify",
+    path="/users/me/email/verify",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -185,7 +185,7 @@ async def verify_email_change(
 
 
 @router.post(
-    path="/auth/password/forgot",
+    path="/users/me/password/forgot",
     tags=["User"],
     status_code=HTTPStatus.ACCEPTED,
     responses={
@@ -222,7 +222,7 @@ async def forgot_password(
 
 
 @router.post(
-    path="/auth/password/reset",
+    path="/users/me/password/reset",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={

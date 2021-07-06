@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.get(
-    path="/auth/users/{user_id}",
+    path="/users/{user_id}",
     tags=["Admin"],
     status_code=HTTPStatus.OK,
     response_model=User,

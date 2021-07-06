@@ -9,7 +9,7 @@ from auth_service.security import SecurityService
 from tests.helpers import DBObjectCreator, create_authorized_user, make_db_user
 
 
-USER_PATH_TEMPLATE = "/auth/users/{user_id}"
+USER_PATH_TEMPLATE = "/users/{user_id}"
 
 
 def test_get_user_success(

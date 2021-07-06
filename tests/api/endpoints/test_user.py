@@ -41,12 +41,12 @@ from tests.helpers import (
 )
 from tests.utils import ApproxDatetime
 
-ME_PATH = "/auth/users/me"
-MY_PASSWORD = "/auth/users/me/password"
-MY_EMAIL = "/auth/users/me/email"
-VERIFY_EMAIL_PATH = "/auth/email/verify"
-FORGOT_PASSWORD_PATH = "/auth/password/forgot"
-RESET_PASSWORD_PATH = "/auth/password/reset"
+ME_PATH = "/users/me"
+MY_PASSWORD = "/users/me/password"
+MY_EMAIL = "/users/me/email"
+VERIFY_EMAIL_PATH = "/users/me/email/verify"
+FORGOT_PASSWORD_PATH = "/users/me/password/forgot"
+RESET_PASSWORD_PATH = "/users/me/password/reset"
 
 
 def test_get_me_success(
