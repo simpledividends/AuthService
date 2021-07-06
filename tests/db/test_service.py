@@ -81,13 +81,10 @@ async def test_registration_when_newcomers_exist_with_parallel_requests(
         for newcomer, token in zip(newcomers, registration_tokens)
     ]
 
-    await db_service.setup()
     try:
         await asyncio.gather(*tasks)
     except TooManyNewcomersWithSameEmail:
         pass
-    finally:
-        await db_service.cleanup()
 
     assert len(db_session.query(NewcomerTable).all()) == max_same_newcomers
 
@@ -112,13 +109,10 @@ async def test_verification_when_users_exist_with_parallel_requests(
         for token_hash in token_hashes
     ]
 
-    await db_service.setup()
     try:
         await asyncio.gather(*tasks)
     except UserAlreadyExists:
         pass
-    finally:
-        await db_service.cleanup()
 
     assert len(db_session.query(UserTable).all()) == 1
 
@@ -150,11 +144,7 @@ async def test_update_passwords_with_parallel_requests(
         for new_password in new_passwords
     ]
 
-    await db_service.setup()
-    try:
-        execution_statuses = await asyncio.gather(*tasks)
-    finally:
-        await db_service.cleanup()
+    execution_statuses = await asyncio.gather(*tasks)
 
     assert sum(execution_statuses) == 1
 
@@ -185,13 +175,10 @@ async def test_many_change_same_email_parallel_requests(
         for token in change_email_tokens
     ]
 
-    await db_service.setup()
     try:
         await asyncio.gather(*tasks)
     except TooManyChangeSameEmailRequests:
         pass
-    finally:
-        await db_service.cleanup()
 
     assert len(db_session.query(EmailTokenTable).all()) == max_email_changes
 
@@ -220,11 +207,7 @@ async def test_verify_same_email_with_parallel_requests(
         for token_hash in token_hashes
     ]
 
-    await db_service.setup()
-    try:
-        results = await asyncio.gather(*tasks)
-    finally:
-        await db_service.cleanup()
+    results = await asyncio.gather(*tasks)
 
     assert sum(results) == 1
 
@@ -254,13 +237,10 @@ async def test_many_forgot_password_parallel_requests(
         for token in password_tokens
     ]
 
-    await db_service.setup()
     try:
         await asyncio.gather(*tasks)
     except TooManyPasswordTokens:
         pass
-    finally:
-        await db_service.cleanup()
 
     assert (
         len(db_session.query(PasswordTokenTable).all())
