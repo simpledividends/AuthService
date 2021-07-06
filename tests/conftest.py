@@ -3,6 +3,7 @@
 import os
 import typing as tp
 from contextlib import contextmanager
+from http import HTTPStatus
 from pathlib import Path
 
 import pytest
@@ -189,6 +190,25 @@ def access_forbidden_check(
             security_service,
             create_db_object,
             request_params,
+        )
+
+    return check
+
+
+@pytest.fixture
+def access_not_found_check(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> tp.Callable[[tp.Dict[str, tp.Any]], None]:
+
+    def check(request_params: tp.Dict[str, tp.Any]) -> None:
+        check_access_forbidden(
+            client,
+            security_service,
+            create_db_object,
+            request_params,
+            expected_status=HTTPStatus.NOT_FOUND,
         )
 
     return check

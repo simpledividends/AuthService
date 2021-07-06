@@ -40,10 +40,10 @@ def test_get_user_success(
     assert resp_json["role"] == other_user.role
 
 
-def test_get_user_forbidden(
-    access_forbidden_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
+def test_get_user_not_found_when_unauthorized(
+    access_not_found_check: tp.Callable[[tp.Dict[str, tp.Any]], None]
 ) -> None:
-    access_forbidden_check(
+    access_not_found_check(
         {"method": "GET", "url": USER_PATH_TEMPLATE.format(user_id="uid")}
     )
 
