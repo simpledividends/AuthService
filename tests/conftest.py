@@ -155,12 +155,10 @@ def security_service(service_config: ServiceConfig) -> SecurityService:
     return make_security_service(service_config)
 
 
+@pytest.mark.asyncio
 @pytest.fixture
-async def db_service(service_config: ServiceConfig) -> tp.Iterator[DBService]:
-    service = make_db_service(service_config)
-    await service.setup()
-    yield service
-    await service.cleanup()
+async def db_service(service_config: ServiceConfig) -> DBService:
+    return make_db_service(service_config)
 
 
 @pytest.fixture
