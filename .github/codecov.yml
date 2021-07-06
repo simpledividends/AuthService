@@ -3,7 +3,4 @@ coverage:
     project:
       default:
         target: 95%
-        branches:
-          - master
-          - develop
     patch: off
