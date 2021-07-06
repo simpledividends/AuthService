@@ -75,4 +75,3 @@ async def get_request_admin(
         raise NotFoundException()
 
     return user
-

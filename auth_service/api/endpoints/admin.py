@@ -9,7 +9,7 @@ from auth_service.api.auth import get_request_admin
 from auth_service.api.exceptions import NotFoundException
 from auth_service.api.services import get_db_service
 from auth_service.db.exceptions import UserNotExists
-from auth_service.models.user import User, UserRole
+from auth_service.models.user import User
 
 router = APIRouter()
 

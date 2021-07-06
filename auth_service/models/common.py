@@ -1,6 +1,6 @@
 import typing as tp
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from pydantic.networks import EmailStr
 
 
