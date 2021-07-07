@@ -22,7 +22,7 @@ auth_api_key_header = APIKeyHeader(
 
 def extract_token_from_header(header: tp.Optional[str]) -> str:
     if not header:
-        app_logger("Authorization header not recognized")
+        app_logger.info("Authorization header not recognized")
         raise ForbiddenException(
             error_key="authorization.not_set",
             error_message="Authorization header not recognized"
@@ -31,14 +31,14 @@ def extract_token_from_header(header: tp.Optional[str]) -> str:
     try:
         scheme, token = header.split()
     except ValueError:
-        app_logger("Authorization scheme not recognized")
+        app_logger.info("Authorization scheme not recognized")
         raise ForbiddenException(
             error_key="authorization.scheme_unrecognised",
             error_message="Authorization scheme not recognised"
         )
 
     if scheme != BEARER_SCHEME:
-        app_logger("Authorization scheme invalid")
+        app_logger.info("Authorization scheme invalid")
         raise ForbiddenException(
             error_key="authorization.scheme_invalid",
             error_message="Expected Bearer authorization scheme"
@@ -64,7 +64,7 @@ async def get_request_user(
         app_logger.info("Access token invalid")
         raise ForbiddenException()
 
-    app_logger(f"Request from user {user.user_id}")
+    app_logger.info(f"Request from user {user.user_id}")
     return user
 
 
