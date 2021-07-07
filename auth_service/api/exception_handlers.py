@@ -12,15 +12,24 @@ from auth_service.models.common import Error
 from auth_service.response import create_response, server_error
 
 from .exceptions import AppException
+from ..context import REQUEST_ID
+
+
+def exc_to_str(exc: Exception) -> str:
+    return f"{exc!r}"
 
 
 async def default_error_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
-    app_logger.error(str(exc))
+    app_logger.error("Default error handler caught: " + exc_to_str(exc))
     error = Error(
-        error_key="server_error", error_message=str(exc)
+        error_key=f"server_error",
+        error_message=(
+            f"Internal server error {exc.__class__} occurred"
+            f"while processing request {REQUEST_ID.get('-')}"
+        )
     )
     return server_error([error])
 
@@ -29,7 +38,11 @@ async def http_error_handler(
     request: Request,
     exc: HTTPException,
 ) -> JSONResponse:
-    app_logger.error(str(exc))
+    log_msg = "HTTP error: " + exc_to_str(exc)
+    if exc.status_code >= 500:
+        app_logger.error(log_msg)
+    else:
+        app_logger.info(log_msg)
     error = Error(error_key="http_exception", error_message=exc.detail)
     return create_response(status_code=exc.status_code, errors=[error])
 
@@ -46,7 +59,7 @@ async def validation_error_handler(
         )
         for err in exc.errors()
     ]
-    app_logger.error(str(errors))
+    app_logger.info("Validation errors: " + str(errors))
     return create_response(status.HTTP_422_UNPROCESSABLE_ENTITY, errors=errors)
 
 
@@ -61,7 +74,11 @@ async def app_exception_handler(
             error_loc=exc.error_loc,
         )
     ]
-    app_logger.error(str(errors))
+    log_msg = "Application errors: " + str(errors)
+    if exc.status_code >= 500:
+        app_logger.error(log_msg)
+    else:
+        app_logger.info(log_msg)
     return create_response(exc.status_code, errors=errors)
 
 

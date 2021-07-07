@@ -46,4 +46,5 @@ def create_app(config: ServiceConfig) -> FastAPI:
     add_exception_handlers(app)
     add_events(app, config)
 
+    app_logger.info("App created")
     return app
