@@ -1,5 +1,4 @@
 from http import HTTPStatus
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from starlette.background import BackgroundTasks
@@ -10,7 +9,6 @@ from auth_service.api.auth import get_request_user
 from auth_service.api.exceptions import (
     ForbiddenException,
     ImproperPasswordError,
-    NotFoundException,
     UserConflictException,
 )
 from auth_service.api.services import (
@@ -33,7 +31,6 @@ from auth_service.models.user import (
     ChangePasswordRequest,
     User,
     UserInfo,
-    UserRole,
 )
 from auth_service.response import create_response
 
@@ -41,7 +38,7 @@ router = APIRouter()
 
 
 @router.get(
-    path="/auth/users/me",
+    path="/users/me",
     tags=["User"],
     status_code=HTTPStatus.OK,
     response_model=User,
@@ -56,7 +53,7 @@ def get_me(
 
 
 @router.patch(
-    path="/auth/users/me",
+    path="/users/me",
     tags=["User"],
     status_code=HTTPStatus.OK,
     response_model=User,
@@ -76,7 +73,7 @@ async def patch_me(
 
 
 @router.patch(
-    path="/auth/users/me/password",
+    path="/users/me/password",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -110,7 +107,7 @@ async def patch_my_password(
 
 
 @router.patch(
-    path="/auth/users/me/email",
+    path="/users/me/email",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -157,7 +154,7 @@ async def patch_my_email(
 
 
 @router.post(
-    path="/auth/email/verify",
+    path="/users/me/email/verify",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -188,7 +185,7 @@ async def verify_email_change(
 
 
 @router.post(
-    path="/auth/password/forgot",
+    path="/users/me/password/forgot",
     tags=["User"],
     status_code=HTTPStatus.ACCEPTED,
     responses={
@@ -225,7 +222,7 @@ async def forgot_password(
 
 
 @router.post(
-    path="/auth/password/reset",
+    path="/users/me/password/reset",
     tags=["User"],
     status_code=HTTPStatus.OK,
     responses={
@@ -253,31 +250,3 @@ async def reset_password(
         raise ForbiddenException()
 
     return create_response(status_code=HTTPStatus.OK)
-
-
-@router.get(
-    path="/auth/users/{user_id}",
-    tags=["User"],
-    status_code=HTTPStatus.OK,
-    response_model=User,
-    responses={
-        403: responses.forbidden,
-        404: responses.not_found,
-        422: responses.unprocessable_entity,
-    }
-)
-async def get_user(
-    request: Request,
-    user_id: UUID,
-    user: User = Depends(get_request_user),
-) -> User:
-    if user.role != UserRole.admin:
-        raise NotFoundException()
-
-    db_service = get_db_service(request.app)
-    try:
-        user = await db_service.get_user(user_id)
-    except UserNotExists:
-        raise NotFoundException()
-
-    return user

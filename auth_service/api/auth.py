@@ -3,10 +3,11 @@ import typing as tp
 from fastapi import Request, Security
 from fastapi.security import APIKeyHeader
 
-from auth_service.api.exceptions import ForbiddenException
-from auth_service.api.services import get_db_service, get_security_service
 from auth_service.db.exceptions import UserNotExists
-from auth_service.models.user import User
+from auth_service.models.user import User, UserRole
+
+from .exceptions import ForbiddenException, NotFoundException
+from .services import get_db_service, get_security_service
 
 AUTHORIZATION_HEADER = "Authorization"
 BEARER_SCHEME = "Bearer"
@@ -44,7 +45,7 @@ def extract_token_from_header(header: tp.Optional[str]) -> str:
 
 async def get_request_user(
     request: Request,
-    header: tp.Optional[str] = Security(auth_api_key_header)
+    header: tp.Optional[str] = Security(auth_api_key_header),
 ) -> User:
     token = extract_token_from_header(header)
 
@@ -57,5 +58,20 @@ async def get_request_user(
         user = await db_service.get_user_by_access_token(hashed_token)
     except UserNotExists:
         raise ForbiddenException()
+
+    return user
+
+
+async def get_request_admin(
+    request: Request,
+    header: tp.Optional[str] = Security(auth_api_key_header),
+) -> User:
+    try:
+        user = await get_request_user(request, header)
+    except ForbiddenException:
+        raise NotFoundException()
+
+    if user.role != UserRole.admin:
+        raise NotFoundException()
 
     return user

@@ -7,16 +7,6 @@ from asyncpg import Connection, Record, SerializationError
 from asyncpg.pool import Pool
 from pydantic import BaseModel
 
-from auth_service.db.exceptions import (
-    NotExists,
-    PasswordInvalid,
-    TokenNotFound,
-    TooManyChangeSameEmailRequests,
-    TooManyNewcomersWithSameEmail,
-    TooManyPasswordTokens,
-    UserAlreadyExists,
-    UserNotExists,
-)
 from auth_service.log import app_logger
 from auth_service.models.token import (
     AccessToken,
@@ -33,6 +23,18 @@ from auth_service.models.user import (
     UserRole,
 )
 from auth_service.utils import utc_now
+
+from .exceptions import (
+    NotExists,
+    PasswordInvalid,
+    TokenNotFound,
+    TooManyChangeSameEmailRequests,
+    TooManyNewcomersWithSameEmail,
+    TooManyPasswordTokens,
+    TransactionError,
+    UserAlreadyExists,
+    UserNotExists,
+)
 
 T = tp.TypeVar("T")
 
@@ -58,7 +60,7 @@ class DBService(BaseModel):
         app_logger.info("Auth service shutdown")
 
     async def ping(self) -> bool:
-        return await self.pool.fetchval("SELECT TRUE;")
+        return await self.pool.fetchval("SELECT TRUE")
 
     async def execute_serializable_transaction(
         self,
@@ -72,7 +74,7 @@ class DBService(BaseModel):
                         result = await func(conn)
                 except SerializationError:
                     if attempt == self.n_transaction_retries - 1:
-                        raise
+                        raise TransactionError
                     await asyncio.sleep(interval)
                     interval *= self.transaction_retry_interval_factor
                 else:
@@ -121,7 +123,7 @@ class DBService(BaseModel):
         query = """
             SELECT count(*)
             FROM users
-            WHERE email = $1::VARCHAR;
+            WHERE email = $1::VARCHAR
         """
         n_users = await conn.fetchval(query, email)
         return n_users
@@ -135,7 +137,7 @@ class DBService(BaseModel):
             SELECT count(*)
             FROM newcomers
                 JOIN registration_tokens rt on newcomers.user_id = rt.user_id
-            WHERE email = $1::VARCHAR AND rt.expired_at > $2::TIMESTAMP;
+            WHERE email = $1::VARCHAR AND rt.expired_at > $2::TIMESTAMP
         """
         n_newcomers = await conn.fetchval(query, email, utc_now())
         return n_newcomers
@@ -145,7 +147,7 @@ class DBService(BaseModel):
         query = """
             SELECT count(*)
             FROM email_tokens
-            WHERE email = $1::VARCHAR AND expired_at > $2::TIMESTAMP;
+            WHERE email = $1::VARCHAR AND expired_at > $2::TIMESTAMP
         """
         n_changes = await conn.fetchval(query, email, utc_now())
         return n_changes
@@ -166,12 +168,7 @@ class DBService(BaseModel):
                     , $4::VARCHAR
                     , $5::TIMESTAMP
                 )
-            RETURNING
-                user_id
-                , name
-                , email
-                , created_at
-            ;
+            RETURNING user_id, name, email, created_at
         """
         record = await conn.fetchrow(
             query,
@@ -192,13 +189,7 @@ class DBService(BaseModel):
             INSERT INTO registration_tokens
                 (token, user_id, created_at, expired_at)
             VALUES
-                (
-                    $1::VARCHAR
-                    , $2::UUID
-                    , $3::TIMESTAMP
-                    , $4::TIMESTAMP
-                )
-            ;
+                ($1::VARCHAR, $2::UUID, $3::TIMESTAMP, $4::TIMESTAMP)
         """
         await conn.execute(
             query,
@@ -237,14 +228,7 @@ class DBService(BaseModel):
                     , $6::TIMESTAMP
                     , $7::role_enum
                 )
-            RETURNING
-                user_id
-                , name
-                , email
-                , created_at
-                , verified_at
-                , role
-            ;
+            RETURNING user_id, name, email, created_at, verified_at, role
         """
         record = await conn.fetchrow(
             query,
@@ -296,15 +280,9 @@ class DBService(BaseModel):
             INSERT INTO sessions
                 (session_id, user_id, started_at, finished_at)
             VALUES
-                (
-                    $1::UUID
-                    , $2::UUID
-                    , $3::TIMESTAMP
-                    , $4::TIMESTAMP
-                )
+                ($1::UUID, $2::UUID, $3::TIMESTAMP, $4::TIMESTAMP)
             RETURNING
                 session_id
-            ;
         """
         record = await self.pool.fetchrow(
             query,
@@ -320,13 +298,7 @@ class DBService(BaseModel):
             INSERT INTO access_tokens
                 (token, session_id, created_at, expired_at)
             VALUES
-                (
-                    $1::VARCHAR
-                    , $2::UUID
-                    , $3::TIMESTAMP
-                    , $4::TIMESTAMP
-                )
-            ;
+                ($1::VARCHAR, $2::UUID, $3::TIMESTAMP, $4::TIMESTAMP)
         """
         await self.pool.execute(
             query,
@@ -341,13 +313,7 @@ class DBService(BaseModel):
             INSERT INTO refresh_tokens
                 (token, session_id, created_at, expired_at)
             VALUES
-                (
-                    $1::VARCHAR
-                    , $2::UUID
-                    , $3::TIMESTAMP
-                    , $4::TIMESTAMP
-                )
-            ;
+                ($1::VARCHAR, $2::UUID, $3::TIMESTAMP, $4::TIMESTAMP)
         """
         await self.pool.execute(
             query,
@@ -451,13 +417,7 @@ class DBService(BaseModel):
             UPDATE users
             SET name = $1::VARCHAR
             WHERE user_id = $2::UUID
-            RETURNING
-                user_id
-                , name
-                , email
-                , created_at
-                , verified_at
-                , role
+            RETURNING user_id, name, email, created_at, verified_at, role
         """
         record = await self.pool.fetchrow(query, user_info.name, user_id)
         return User(**record)
@@ -525,7 +485,6 @@ class DBService(BaseModel):
                     , $4::TIMESTAMP
                     , $5::TIMESTAMP
                 )
-            ;
         """
         await conn.execute(
             query,
@@ -561,14 +520,7 @@ class DBService(BaseModel):
             UPDATE users
             SET email = $1::VARCHAR
             WHERE user_id = $2::UUID
-            RETURNING
-                user_id
-                , name
-                , email
-                , created_at
-                , verified_at
-                , role
-
+            RETURNING user_id , name , email , created_at , verified_at , role
         """
         record = await conn.fetchrow(query, record["email"], record["user_id"])
         return User(**record)
@@ -583,13 +535,7 @@ class DBService(BaseModel):
 
     async def get_user_by_email(self, email: str) -> User:
         query = """
-            SELECT
-                user_id
-                , name
-                , email
-                , created_at
-                , verified_at
-                , role
+            SELECT user_id, name, email, created_at, verified_at, role
             FROM users
             WHERE email = $1::VARCHAR
         """
@@ -624,13 +570,7 @@ class DBService(BaseModel):
             INSERT INTO password_tokens
                 (token, user_id, created_at, expired_at)
             VALUES
-                (
-                    $1::VARCHAR
-                    , $2::UUID
-                    , $3::TIMESTAMP
-                    , $4::TIMESTAMP
-                )
-            ;
+                ($1::VARCHAR, $2::UUID, $3::TIMESTAMP, $4::TIMESTAMP)
         """
         await conn.execute(
             query,
@@ -645,7 +585,7 @@ class DBService(BaseModel):
         query = """
             SELECT count(*)
             FROM password_tokens
-            WHERE user_id = $1::UUID AND expired_at > $2::TIMESTAMP;
+            WHERE user_id = $1::UUID AND expired_at > $2::TIMESTAMP
         """
         n_tokens = await conn.fetchval(query, user_id, utc_now())
         return n_tokens
@@ -663,8 +603,8 @@ class DBService(BaseModel):
         user = await self.execute_serializable_transaction(func)
         return user
 
+    @staticmethod
     async def _update_password_by_token(
-        self,
         conn: Connection,
         token: str,
         password: str,

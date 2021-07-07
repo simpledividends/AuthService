@@ -5,8 +5,9 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import uvloop
 from fastapi import FastAPI
 
-from ..log import app_logger, setup_logging
-from ..settings import ServiceConfig
+from auth_service.log import app_logger, setup_logging
+from auth_service.settings import ServiceConfig
+
 from .endpoints import add_routes
 from .events import add_events
 from .exception_handlers import add_exception_handlers

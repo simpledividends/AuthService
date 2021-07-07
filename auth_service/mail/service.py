@@ -8,9 +8,10 @@ from aiohttp import BasicAuth
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, HttpUrl
 
+from auth_service.models.common import Email
+from auth_service.models.token import TokenStr
 from auth_service.models.user import Newcomer, User
 
-from ..models.common import Email
 from .config import (
     CHANGE_EMAIL_HTML,
     CHANGE_EMAIL_SENDER,
@@ -56,7 +57,7 @@ class MailService(BaseModel):
     async def send_registration_letter(
         self,
         newcomer: Newcomer,
-        token: str,
+        token: TokenStr,
     ) -> None:
         jinja_env = Environment(
             loader=FileSystemLoader(TEMPLATES_PATH),
@@ -84,7 +85,7 @@ class MailService(BaseModel):
         self,
         user: User,
         new_email: Email,
-        token: str,
+        token: TokenStr,
     ) -> None:
         jinja_env = Environment(
             loader=FileSystemLoader(TEMPLATES_PATH),
@@ -109,7 +110,7 @@ class MailService(BaseModel):
     async def send_forgot_password_letter(
         self,
         user: User,
-        token: str,
+        token: TokenStr,
     ) -> None:
         jinja_env = Environment(
             loader=FileSystemLoader(TEMPLATES_PATH),

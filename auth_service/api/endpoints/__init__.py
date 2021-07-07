@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from .admin import router as admin_router
 from .health import router as health_router
 from .registration import router as registration_router
 from .session import router as session_router
@@ -12,5 +13,6 @@ def add_routes(app: FastAPI) -> None:
         registration_router,
         session_router,
         user_router,
+        admin_router,
     ):
         app.include_router(router)

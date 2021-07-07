@@ -23,7 +23,8 @@ from auth_service.db.models import (
 from auth_service.models.user import UserRole
 from auth_service.security import SecurityService
 from auth_service.utils import utc_now
-from tests.utils import random_email
+
+from .utils import random_email
 
 DBObjectCreator = tp.Callable[[Base], None]
 
@@ -217,6 +218,7 @@ def check_access_forbidden(
     security_service: SecurityService,
     create_db_object: DBObjectCreator,
     request_params: tp.Dict[str, tp.Any],
+    expected_status: HTTPStatus = HTTPStatus.FORBIDDEN,
 ) -> None:
     cases = (
         ("NotAuthorization", "Bearer ", None, "authorization.not_set"),
@@ -246,5 +248,6 @@ def check_access_forbidden(
                 headers={key: value_beginning + token}
             )
 
-        assert resp.status_code == HTTPStatus.FORBIDDEN
-        assert resp.json()["errors"][0]["error_key"] == expected_error_key
+        assert resp.status_code == expected_status
+        if expected_status == HTTPStatus.FORBIDDEN:
+            assert resp.json()["errors"][0]["error_key"] == expected_error_key

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, constr
 
-from auth_service.models.common import Email
+from .common import Email
 
 
 class UserRole(str, Enum):
@@ -12,7 +12,7 @@ class UserRole(str, Enum):
     admin = "admin"
 
 
-Name = constr(strip_whitespace=True, min_length=1, max_length=50)
+Name = constr(strip_whitespace=True, min_length=1, max_length=128)
 
 
 class NewcomerInfo(BaseModel):

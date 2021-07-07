@@ -8,16 +8,17 @@ from passlib import hash as phash
 from pydantic.main import BaseModel
 from zxcvbn import zxcvbn
 
-from auth_service.models.common import Email
-from auth_service.models.token import (
+from .models.common import Email
+from .models.token import (
     AccessToken,
     ChangeEmailToken,
     PasswordToken,
     RefreshToken,
     RegistrationToken,
     Token,
+    TokenStr,
 )
-from auth_service.utils import utc_now
+from .utils import utc_now
 
 ALPHABET = string.ascii_letters + string.digits
 TOKEN_LENGTH = 64
@@ -61,14 +62,14 @@ class SecurityService(BaseModel):
         return phash.pbkdf2_sha256.verify(checked_password, hashed_password)
 
     @staticmethod
-    def hash_token_string(token_string: str) -> str:
+    def hash_token_string(token_string: TokenStr) -> str:
         return phash.hex_sha256.hash(token_string)
 
     @staticmethod
-    def generate_token_string() -> str:
+    def generate_token_string() -> TokenStr:
         return "".join(secrets.choice(ALPHABET) for _ in range(TOKEN_LENGTH))
 
-    def make_token(self, lifetime: timedelta) -> tp.Tuple[str, Token]:
+    def make_token(self, lifetime: timedelta) -> tp.Tuple[TokenStr, Token]:
         now = utc_now()
         token_string = self.generate_token_string()
         token = Token(
@@ -81,7 +82,7 @@ class SecurityService(BaseModel):
     def make_registration_token(
         self,
         user_id: UUID,
-    ) -> tp.Tuple[str, RegistrationToken]:
+    ) -> tp.Tuple[TokenStr, RegistrationToken]:
         token_string, token = self.make_token(self.registration_token_lifetime)
         registration_token = RegistrationToken(**token.dict(), user_id=user_id)
         return token_string, registration_token
@@ -90,7 +91,7 @@ class SecurityService(BaseModel):
         self,
         user_id: UUID,
         email: Email,
-    ) -> tp.Tuple[str, ChangeEmailToken]:
+    ) -> tp.Tuple[TokenStr, ChangeEmailToken]:
         token_string, token = self.make_token(self.change_email_token_lifetime)
         change_email_token = ChangeEmailToken(
             **token.dict(),
@@ -102,7 +103,7 @@ class SecurityService(BaseModel):
     def make_password_token(
         self,
         user_id: UUID,
-    ) -> tp.Tuple[str, PasswordToken]:
+    ) -> tp.Tuple[TokenStr, PasswordToken]:
         token_string, token = self.make_token(self.password_token_lifetime)
         password_token = PasswordToken(**token.dict(), user_id=user_id)
         return token_string, password_token
@@ -110,7 +111,7 @@ class SecurityService(BaseModel):
     def make_access_token(
         self,
         session_id: UUID,
-    ) -> tp.Tuple[str, AccessToken]:
+    ) -> tp.Tuple[TokenStr, AccessToken]:
         token_string, token = self.make_token(self.access_token_lifetime)
         access_token = AccessToken(**token.dict(), session_id=session_id)
         return token_string, access_token
@@ -118,7 +119,7 @@ class SecurityService(BaseModel):
     def make_refresh_token(
         self,
         session_id: UUID,
-    ) -> tp.Tuple[str, RefreshToken]:
+    ) -> tp.Tuple[TokenStr, RefreshToken]:
         token_string, token = self.make_token(self.refresh_token_lifetime)
         refresh_token = RefreshToken(**token.dict(), session_id=session_id)
         return token_string, refresh_token

@@ -3,6 +3,7 @@
 import os
 import typing as tp
 from contextlib import contextmanager
+from http import HTTPStatus
 from pathlib import Path
 
 import pytest
@@ -21,18 +22,15 @@ from auth_service.db.models import Base
 from auth_service.db.service import DBService
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig, get_config
-from tests.constants import (
+
+from .constants import (
     CHANGE_EMAIL_LINK_TEMPLATE,
     MAILGUN_API_KEY,
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
     RESET_PASSWORD_LINK_TEMPLATE,
 )
-from tests.helpers import (
-    DBObjectCreator,
-    FakeMailgunServer,
-    check_access_forbidden,
-)
+from .helpers import DBObjectCreator, FakeMailgunServer, check_access_forbidden
 
 CURRENT_DIR = Path(__file__).parent
 ALEMBIC_INI_PATH = CURRENT_DIR.parent / "alembic.ini"
@@ -157,8 +155,9 @@ def security_service(service_config: ServiceConfig) -> SecurityService:
     return make_security_service(service_config)
 
 
+@pytest.mark.asyncio
 @pytest.fixture
-def db_service(service_config: ServiceConfig) -> DBService:
+async def db_service(service_config: ServiceConfig) -> DBService:
     return make_db_service(service_config)
 
 
@@ -186,6 +185,25 @@ def access_forbidden_check(
             security_service,
             create_db_object,
             request_params,
+        )
+
+    return check
+
+
+@pytest.fixture
+def access_not_found_check(
+    client: TestClient,
+    security_service: SecurityService,
+    create_db_object: DBObjectCreator,
+) -> tp.Callable[[tp.Dict[str, tp.Any]], None]:
+
+    def check(request_params: tp.Dict[str, tp.Any]) -> None:
+        check_access_forbidden(
+            client,
+            security_service,
+            create_db_object,
+            request_params,
+            expected_status=HTTPStatus.NOT_FOUND,
         )
 
     return check

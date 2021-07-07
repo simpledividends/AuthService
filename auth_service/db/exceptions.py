@@ -28,3 +28,7 @@ class UserNotExists(NotExists):
 
 class PasswordInvalid(Exception):
     pass
+
+
+class TransactionError(Exception):
+    pass

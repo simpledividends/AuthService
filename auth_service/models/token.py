@@ -5,9 +5,11 @@ from pydantic import BaseModel
 
 from .common import Email
 
+TokenStr = str
+
 
 class Token(BaseModel):
-    token: str
+    token: TokenStr
     created_at: datetime
     expired_at: datetime
 

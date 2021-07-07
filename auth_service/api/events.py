@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 
-from auth_service.api.services import get_db_service, make_db_service
 from auth_service.log import app_logger
 from auth_service.settings import ServiceConfig
+
+from .services import get_db_service, make_db_service
 
 
 def add_events(app: FastAPI, config: ServiceConfig) -> None:

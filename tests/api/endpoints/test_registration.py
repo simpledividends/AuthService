@@ -159,7 +159,16 @@ def test_strip_name_and_email(
     (
         ({"name": {"a": "b"}}, ["body", "name"], "type_error.str"),
         ({"name": ""}, ["body", "name"], "value_error.any_str.min_length"),
-        ({"name": "a"*51}, ["body", "name"], "value_error.any_str.max_length"),
+        (
+            {"name": "a" * 129},
+            ["body", "name"],
+            "value_error.any_str.max_length"
+        ),
+        (
+            {"email": "a@b.c" + "c" * 124},
+            ["body", "email"],
+            "value_error.email"
+        ),
         ({"email": ""}, ["body", "email"], "value_error.email"),
         (
             {"password": "simple"},

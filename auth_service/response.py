@@ -6,7 +6,7 @@ import orjson
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth_service.models.common import Error
+from .models.common import Error
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
