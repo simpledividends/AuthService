@@ -15,6 +15,7 @@ from auth_service.api.exceptions import ForbiddenException
 from auth_service.api.services import get_db_service, get_security_service
 from auth_service.db.exceptions import NotExists, UserNotExists
 from auth_service.db.service import DBService
+from auth_service.log import app_logger
 from auth_service.models.auth import Credentials, TokenBody, TokenPair
 from auth_service.response import create_response
 from auth_service.security import SecurityService
@@ -50,12 +51,14 @@ async def login(
     request: Request,
     credentials: Credentials,
 ) -> TokenPair:
+    app_logger.info(f"Login with email {credentials.email}")
     db_service = get_db_service(request.app)
     try:
         user_id, hashed_password = await db_service.get_user_with_password(
             credentials.email
         )
     except UserNotExists:
+        app_logger.info(f"User with email {credentials.email} not exists")
         raise ForbiddenException(error_key="credentials.invalid")
 
     security_service = get_security_service(request.app)
@@ -63,10 +66,12 @@ async def login(
         credentials.password,
         hashed_password,
     ):
+        app_logger.info(f"Password for user {user_id} invalid")
         raise ForbiddenException(error_key="credentials.invalid")
 
     session_id = await db_service.create_session(user_id)
     tokens = await _create_token_pair(security_service, db_service, session_id)
+    app_logger.info(f"Session {session_id} created for user {user_id}")
     return tokens
 
 
@@ -91,6 +96,7 @@ async def logout(
     try:
         await db_service.finish_session(hashed_token)
     except NotExists:
+        app_logger.info("Token or session not exists")
         raise ForbiddenException()
 
     return create_response(status_code=HTTPStatus.OK)
@@ -117,7 +123,9 @@ async def refresh_tokens(
     try:
         session_id = await db_service.drop_valid_refresh_token(hashed_token)
     except NotExists:
+        app_logger.info("Token or session not exists")
         raise ForbiddenException()
 
     tokens = await _create_token_pair(security_service, db_service, session_id)
+    app_logger.info(f"Generated new token pair for session {session_id}")
     return tokens
