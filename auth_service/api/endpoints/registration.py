@@ -117,7 +117,7 @@ async def verify_registered_user(
 
     db_service = get_db_service(request.app)
     try:
-        await db_service.verify_newcomer(hashed_token)
+        user = await db_service.verify_newcomer(hashed_token)
     except TokenNotFound:
         app_logger.info("Token not found")
         raise ForbiddenException()

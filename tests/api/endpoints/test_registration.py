@@ -338,17 +338,7 @@ def test_register_verify_success(
 
     # Check response
     assert resp.status_code == HTTPStatus.OK
-    resp_json = resp.json()
-    verified_at = resp_json.pop("verified_at")
-    assert datetime.fromisoformat(verified_at) == ApproxDatetime(utc_now())
-    expected_response = {
-        "user_id": newcomer.user_id,
-        "name": newcomer.name,
-        "email": newcomer.email,
-        "created_at": newcomer.created_at.isoformat(),
-        "role": "user",
-    }
-    assert resp_json == expected_response
+    assert resp.json() == {}
 
     # Check DB
     assert_all_tables_are_empty(db_session, [UserTable, NewcomerTable])
@@ -358,7 +348,7 @@ def test_register_verify_success(
     user = users[0]
     for attr in ("user_id", "name", "email", "password", "created_at"):
         assert getattr(newcomer, attr) == getattr(user, attr)
-    assert user.verified_at.isoformat() == verified_at
+    assert user.verified_at == ApproxDatetime(utc_now())
     assert user.role == "user"
 
 
