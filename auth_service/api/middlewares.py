@@ -74,7 +74,7 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
                 msg=f"Caught unhandled exception: {e!r}"
             )
             error = Error(
-                error_key=f"server_error",
+                error_key="server_error",
                 error_message=(
                     f"Internal server error {e.__class__}"
                     f"while processing request {REQUEST_ID.get('-')}"

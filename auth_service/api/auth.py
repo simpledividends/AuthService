@@ -4,11 +4,11 @@ from fastapi import Request, Security
 from fastapi.security import APIKeyHeader
 
 from auth_service.db.exceptions import UserNotExists
+from auth_service.log import app_logger
 from auth_service.models.user import User, UserRole
 
 from .exceptions import ForbiddenException, NotFoundException
 from .services import get_db_service, get_security_service
-from ..log import app_logger
 
 AUTHORIZATION_HEADER = "Authorization"
 BEARER_SCHEME = "Bearer"

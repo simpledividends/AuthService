@@ -24,12 +24,7 @@ from auth_service.db.exceptions import (
 )
 from auth_service.log import app_logger
 from auth_service.models.auth import TokenBody
-from auth_service.models.user import (
-    Newcomer,
-    NewcomerFull,
-    NewcomerRegistered,
-    User,
-)
+from auth_service.models.user import Newcomer, NewcomerFull, NewcomerRegistered
 from auth_service.response import create_response
 from auth_service.utils import utc_now
 
@@ -57,7 +52,7 @@ async def register(
 
     security_service = get_security_service(request.app)
     if not security_service.is_password_proper(newcomer.password):
-        app_logger.info(f"Password is improper")
+        app_logger.info("Password is improper")
         raise ImproperPasswordError()
 
     newcomer_full = NewcomerFull(

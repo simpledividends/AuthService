@@ -7,12 +7,12 @@ from starlette import status
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
+from auth_service.context import REQUEST_ID
 from auth_service.log import app_logger
 from auth_service.models.common import Error
 from auth_service.response import create_response, server_error
 
 from .exceptions import AppException
-from ..context import REQUEST_ID
 
 
 def exc_to_str(exc: Exception) -> str:
@@ -23,9 +23,9 @@ async def default_error_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
-    app_logger.error("Default error handler caught: " + exc_to_str(exc))
+    app_logger.error(f"Default error handler caught: {exc_to_str(exc)}")
     error = Error(
-        error_key=f"server_error",
+        error_key="server_error",
         error_message=(
             f"Internal server error {exc.__class__} occurred"
             f"while processing request {REQUEST_ID.get('-')}"
@@ -38,7 +38,7 @@ async def http_error_handler(
     request: Request,
     exc: HTTPException,
 ) -> JSONResponse:
-    log_msg = "HTTP error: " + exc_to_str(exc)
+    log_msg = f"HTTP error: {exc_to_str(exc)}"
     if exc.status_code >= 500:
         app_logger.error(log_msg)
     else:
@@ -59,7 +59,7 @@ async def validation_error_handler(
         )
         for err in exc.errors()
     ]
-    app_logger.info("Validation errors: " + str(errors))
+    app_logger.info(f"Validation errors: {exc_to_str(exc)}")
     return create_response(status.HTTP_422_UNPROCESSABLE_ENTITY, errors=errors)
 
 
@@ -74,7 +74,7 @@ async def app_exception_handler(
             error_loc=exc.error_loc,
         )
     ]
-    log_msg = "Application errors: " + str(errors)
+    log_msg = f"Application errors: {exc_to_str(exc)}"
     if exc.status_code >= 500:
         app_logger.error(log_msg)
     else:
