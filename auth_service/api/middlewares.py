@@ -13,7 +13,6 @@ from auth_service.log import access_logger, app_logger
 from auth_service.models.common import Error
 from auth_service.response import server_error
 
-
 SECURITY_HEADERS = {
     "Cache-Control": "no-cache, no-store",
     "Expires": "0",
