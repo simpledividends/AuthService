@@ -2,6 +2,7 @@ from http import HTTPStatus
 
 from starlette.testclient import TestClient
 
+from auth_service.api.middlewares import SECURITY_HEADERS
 from auth_service.settings import ServiceConfig
 
 
@@ -28,6 +29,17 @@ def test_request_id_in_response(
         )
     assert response.status_code == HTTPStatus.OK
     assert response.headers[service_config.request_id_header] == request_id
+
+
+def test_security_headers_in_response(
+    client: TestClient,
+    service_config: ServiceConfig,
+) -> None:
+    with client:
+        response = client.get("/ping")
+    assert response.status_code == HTTPStatus.OK
+    for key, value in SECURITY_HEADERS.items():
+        assert response.headers[key] == value
 
 
 def test_health(
