@@ -71,11 +71,14 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         except Exception as e:  # pylint: disable=W0703,W1203
             app_logger.exception(
-                msg=f"Caught unhandled {e.__class__} exception: {e}"
+                msg=f"Caught unhandled exception: {e!r}"
             )
             error = Error(
                 error_key="server_error",
-                error_message="Internal Server Error"
+                error_message=(
+                    f"Internal server error {e.__class__}"
+                    f"while processing request {REQUEST_ID.get('-')}"
+                )
             )
             return server_error([error])
 

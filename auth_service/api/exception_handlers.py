@@ -7,6 +7,7 @@ from starlette import status
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
+from auth_service.context import REQUEST_ID
 from auth_service.log import app_logger
 from auth_service.models.common import Error
 from auth_service.response import create_response, server_error
@@ -14,13 +15,21 @@ from auth_service.response import create_response, server_error
 from .exceptions import AppException
 
 
+def exc_to_str(exc: Exception) -> str:
+    return f"{exc!r}"
+
+
 async def default_error_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
-    app_logger.error(str(exc))
+    app_logger.error(f"Default error handler caught: {exc_to_str(exc)}")
     error = Error(
-        error_key="server_error", error_message=str(exc)
+        error_key="server_error",
+        error_message=(
+            f"Internal server error {exc.__class__} occurred"
+            f"while processing request {REQUEST_ID.get('-')}"
+        )
     )
     return server_error([error])
 
@@ -29,7 +38,11 @@ async def http_error_handler(
     request: Request,
     exc: HTTPException,
 ) -> JSONResponse:
-    app_logger.error(str(exc))
+    log_msg = f"HTTP error: {exc_to_str(exc)}"
+    if exc.status_code >= 500:
+        app_logger.error(log_msg)
+    else:
+        app_logger.info(log_msg)
     error = Error(error_key="http_exception", error_message=exc.detail)
     return create_response(status_code=exc.status_code, errors=[error])
 
@@ -46,7 +59,7 @@ async def validation_error_handler(
         )
         for err in exc.errors()
     ]
-    app_logger.error(str(errors))
+    app_logger.info(f"Validation errors: {exc_to_str(exc)}")
     return create_response(status.HTTP_422_UNPROCESSABLE_ENTITY, errors=errors)
 
 
@@ -61,7 +74,11 @@ async def app_exception_handler(
             error_loc=exc.error_loc,
         )
     ]
-    app_logger.error(str(errors))
+    log_msg = f"Application errors: {exc_to_str(exc)}"
+    if exc.status_code >= 500:
+        app_logger.error(log_msg)
+    else:
+        app_logger.info(log_msg)
     return create_response(exc.status_code, errors=errors)
 
 

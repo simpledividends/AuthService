@@ -9,6 +9,7 @@ from auth_service.api.auth import get_request_admin
 from auth_service.api.exceptions import NotFoundException
 from auth_service.api.services import get_db_service
 from auth_service.db.exceptions import UserNotExists
+from auth_service.log import app_logger
 from auth_service.models.user import User
 
 router = APIRouter()
@@ -27,12 +28,14 @@ router = APIRouter()
 async def get_user(
     request: Request,
     user_id: UUID,
-    _: User = Depends(get_request_admin),
+    admin: User = Depends(get_request_admin),
 ) -> User:
+    app_logger.info(f"Admin {admin.user_id} asks for user {user_id}")
     db_service = get_db_service(request.app)
     try:
         user = await db_service.get_user(user_id)
     except UserNotExists:
+        app_logger.info(f"Requested user {user_id} not found")
         raise NotFoundException()
 
     return user
