@@ -20,7 +20,7 @@ from .models.token import (
 )
 from .utils import utc_now
 
-ALPHABET = string.ascii_letters + string.digits
+ALPHABET = string.ascii_lowercase + string.digits
 TOKEN_LENGTH = 64
 
 
