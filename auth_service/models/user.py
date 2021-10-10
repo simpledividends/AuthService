@@ -10,6 +10,7 @@ from .common import Email
 class UserRole(str, Enum):
     user = "user"
     admin = "admin"
+    service = "service"
 
 
 Name = constr(strip_whitespace=True, min_length=1, max_length=128)
