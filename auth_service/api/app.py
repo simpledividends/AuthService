@@ -36,7 +36,7 @@ def create_app(config: ServiceConfig) -> FastAPI:
     setup_logging(config)
     setup_asyncio()
 
-    app = FastAPI()
+    app = FastAPI(debug=False)
 
     app.state.security_service = make_security_service(config)
     app.state.mail_service = make_mail_service(config)
