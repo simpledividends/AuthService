@@ -91,7 +91,10 @@ jobs:
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags:  cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ github.sha }}
+          tags:  [
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ github.sha }},
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ github.sha }}
+          ]
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
