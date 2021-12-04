@@ -6,45 +6,48 @@ env:
   IMAGE: auth_service
 
 jobs:
-  # run_tests:
-  #   runs-on: ubuntu-20.04
+  run_tests:
+    runs-on: ubuntu-20.04
 
-    # services:
-    #   postgres:
-    #     image: postgres:latest
-    #     env:
-    #       POSTGRES_DB: db
-    #       POSTGRES_USER: user
-    #       POSTGRES_PASSWORD: pass
-    #     ports:
-    #       - 5432:5432
-    #     # Set health checks to wait until postgres has started
-    #     options: >-
-    #       --health-cmd pg_isready
-    #       --health-interval 2s
-    #       --health-timeout 1s
-    #       --health-retries 10
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: db
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 1s
+          --health-retries 10
 
-    # steps:
-    #   - uses: actions/checkout@v2
-    #   - name: "Setup python"
-    #     uses: actions/setup-python@v2
-    #     with:
-    #       python-version: "3.8"
-      # - run: pip install poetry
-      # - run: make install
-      # - run: make lint
-      # - run: make test
-      # - run: make cov
-      # - name: "Upload coverage to Codecov"
-      #   uses: codecov/codecov-action@v1
-      #   with:
-      #     fail_ci_if_error: true
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      # - run: echo Hello
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Setup python"
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - run: pip install poetry
+      - run: make install
+      - run: make lint
+      - run: make test
+      - run: make cov
+      - name: "Upload coverage to Codecov"
+        uses: codecov/codecov-action@v1
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - run: echo Hello
+
+
+# -------------- TEST ENV --------------------- #
 
   test_build:
-    # needs: test
+    needs: test
     runs-on: ubuntu-20.04
     if: github.ref == 'refs/heads/develop'
 
@@ -92,6 +95,8 @@ jobs:
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
+
+        
   test_deploy:
     needs: test_build
     runs-on: ubuntu-20.04

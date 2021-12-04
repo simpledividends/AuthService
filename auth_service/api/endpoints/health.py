@@ -15,7 +15,7 @@ router = APIRouter()
     tags=["Health"],
 )
 async def ping(_: Request) -> JSONResponse:
-    return create_response(message="pong!", status_code=HTTPStatus.OK)
+    return create_response(message="pong", status_code=HTTPStatus.OK)
 
 
 @router.get(
