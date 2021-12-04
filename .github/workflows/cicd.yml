@@ -50,7 +50,7 @@ jobs:
     steps:
 
       - name: Get SHORT_SHA
-        run: echo "SHORT_SHA=`git rev-parse --short HEAD`" >> $GITHUB_ENV
+        run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
 
       - name: Check Out Repo
         uses: actions/checkout@v2
@@ -117,4 +117,4 @@ jobs:
           SSH_USER_HOST: dpsu@178.154.244.92
           REGISTRY_ID: ${{ secrets.YC_TEST_CR_ID }}
         run: |
-          ssh $SSH_USER_HOST docker pull cr.yandex/${REGISTRY_ID}/deploy_auth_service:${SHORT_SHA}
+          ssh $SSH_USER_HOST docker pull cr.yandex/${REGISTRY_ID}/auth_service:${SHORT_SHA}
