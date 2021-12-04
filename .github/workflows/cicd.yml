@@ -47,7 +47,7 @@ jobs:
 # -------------- TEST ENV --------------------- #
 
   test_build:
-    needs: test
+    needs: run_tests
     runs-on: ubuntu-20.04
     if: github.ref == 'refs/heads/develop'
 
@@ -96,7 +96,7 @@ jobs:
         run: echo ${{ steps.docker_build.outputs.digest }}
 
 
-        
+
   test_deploy:
     needs: test_build
     runs-on: ubuntu-20.04
