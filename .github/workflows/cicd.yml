@@ -103,6 +103,7 @@ jobs:
           SSH_USER_HOST: ${{ secrets.YC_TEST_VM_USER_HOST }}
           SSH_PRIVATE_KEY: ${{ secrets.YC_TEST_VM_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.YC_TEST_VM_SSH_KNOWN_HOSTS }}
+        run: echo Hello
 
       - name: Prepare SSH
         run: |
