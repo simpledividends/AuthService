@@ -112,5 +112,7 @@ jobs:
       - name: Pull image
         env:
           SSH_USER_HOST: ${{ secrets.YC_TEST_VM_USER_HOST }}
-        run: ssh $SSH_USER_HOST ./pull_docker.sh
+        run: |
+          echo $SSH_USER_HOST
+          ssh $SSH_USER_HOST ./pull_docker.sh
 
