@@ -101,8 +101,8 @@ jobs:
       - name: Create SSH key
         shell: bash
         env:
-          SSH_PRIVATE_KEY: ${{secrets.YC_TEST_VM_SSH_KEY}}
-          SSH_KNOWN_HOSTS: ${{secrets.YC_TEST_VM_SSH_KNOWN_HOSTS}}
+          SSH_PRIVATE_KEY: ${{ secrets.YC_TEST_VM_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.YC_TEST_VM_SSH_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh/
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
@@ -111,6 +111,6 @@ jobs:
 
       - name: Pull image
         env:
-          SSH_USER_HOST: dpsu@178.154.244.92
-        run: ssh dpsu@178.154.244.43 ./pull_docker.sh
+          SSH_USER_HOST: ${{ secrets.YC_TEST_VM_USER_HOST }}
+        run: ssh $SSH_USER_HOST ./pull_docker.sh
 
