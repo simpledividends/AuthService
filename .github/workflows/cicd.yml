@@ -98,11 +98,13 @@ jobs:
 
     steps:
 
-      - name: Create SSH key
-        shell: bash
+      - name: Set env
         env:
+          SSH_USER_HOST: ${{ secrets.YC_TEST_VM_USER_HOST }}
           SSH_PRIVATE_KEY: ${{ secrets.YC_TEST_VM_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.YC_TEST_VM_SSH_KNOWN_HOSTS }}
+
+      - name: Prepare SSH
         run: |
           mkdir -p ~/.ssh/
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
@@ -110,9 +112,5 @@ jobs:
           echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
       - name: Pull image
-        env:
-          SSH_USER_HOST: ${{ secrets.YC_TEST_VM_USER_HOST }}
-        run: |
-          echo $SSH_USER_HOST
-          ssh $SSH_USER_HOST ./pull_docker.sh
+        run: ssh $SSH_USER_HOST ./pull_docker.sh
 
