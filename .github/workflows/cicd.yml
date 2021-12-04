@@ -5,8 +5,8 @@ env:
   DB_URL: postgresql://user:pass@127.0.0.1:5432/db
 
 jobs:
-  test:
-    runs-on: ubuntu-20.04
+  # test:
+  #   runs-on: ubuntu-20.04
 
     # services:
     #   postgres:
@@ -24,12 +24,12 @@ jobs:
     #       --health-timeout 1s
     #       --health-retries 10
 
-    steps:
-      - uses: actions/checkout@v2
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.8"
+    # steps:
+    #   - uses: actions/checkout@v2
+    #   - name: "Setup python"
+    #     uses: actions/setup-python@v2
+    #     with:
+    #       python-version: "3.8"
       # - run: pip install poetry
       # - run: make install
       # - run: make lint
@@ -40,14 +40,17 @@ jobs:
       #   with:
       #     fail_ci_if_error: true
       #     token: ${{ secrets.CODECOV_TOKEN }}
-      - run: echo Hello
+      # - run: echo Hello
 
-  deploy_test:
-    needs: test
+  build_test:
+    # needs: test
     runs-on: ubuntu-20.04
     if: github.ref == 'refs/heads/develop'
 
     steps:
+
+      - name: Get SHORT_SHA
+        run: echo "SHORT_SHA=`git rev-parse --short HEAD`" >> $GITHUB_ENV
 
       - name: Check Out Repo
         uses: actions/checkout@v2
@@ -80,12 +83,38 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: |
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ github.sha }}
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${SHORT_SHA}
+#            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
+  deploy_test:
+    needs: build_test
+    runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/develop'
 
+    steps:
+
+      - name: Get SHORT_SHA
+        run: echo "SHORT_SHA=`git rev-parse --short HEAD`" >> $GITHUB_ENV
+
+      - name: Create SSH key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{secrets.YC_TEST_VM_SSH_KEY}}
+          SSH_KNOWN_HOSTS: ${{secrets.YC_TEST_VM_SSH_KNOWN_HOSTS}}
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          sudo chmod 600 ../private.key
+          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Download container
+        env:
+          SSH_USER_HOST: dpsu@178.154.244.92
+          REGISTRY_ID: ${{ secrets.YC_TEST_CR_ID }}
+        run: |
+          ssh $SSH_USER_HOST docker pull cr.yandex/${REGISTRY_ID}/deploy_auth_service:${SHORT_SHA}
