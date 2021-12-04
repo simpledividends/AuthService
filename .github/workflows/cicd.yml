@@ -103,7 +103,7 @@ jobs:
 
     steps:
 
-    - name: Get SHORT_SHA
+      - name: Get SHORT_SHA
         run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
 
       - name: Prepare SSH
