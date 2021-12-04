@@ -84,7 +84,7 @@ jobs:
           push: true
           tags: |
             cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ env.SHORT_SHA }}
-           cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
