@@ -95,16 +95,13 @@ jobs:
     # needs: build_test
     runs-on: ubuntu-20.04
     if: github.ref == 'refs/heads/develop'
-
-    steps:
-
-      - name: Set env
-        env:
+    env:
           SSH_USER_HOST: ${{ secrets.YC_TEST_VM_USER_HOST }}
           SSH_PRIVATE_KEY: ${{ secrets.YC_TEST_VM_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.YC_TEST_VM_SSH_KNOWN_HOSTS }}
-        run: echo Hello
 
+    steps:
+    
       - name: Prepare SSH
         run: |
           mkdir -p ~/.ssh/
