@@ -83,7 +83,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: |
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${SHORT_SHA}
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ env.SHORT_SHA }}
 #            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
@@ -117,4 +117,4 @@ jobs:
           SSH_USER_HOST: dpsu@178.154.244.92
           REGISTRY_ID: ${{ secrets.YC_TEST_CR_ID }}
         run: |
-          ssh $SSH_USER_HOST docker pull cr.yandex/${REGISTRY_ID}/auth_service:${SHORT_SHA}
+          ssh $SSH_USER_HOST docker pull cr.yandex/$REGISTRY_ID/auth_service:$SHORT_SHA
