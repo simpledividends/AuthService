@@ -112,6 +112,5 @@ jobs:
       - name: Pull image
         env:
           SSH_USER_HOST: dpsu@178.154.244.92
-          REGISTRY_ID: ${{ secrets.YC_TEST_CR_ID }}
-        run: ssh $SSH_USER_HOST ./pull_docker.sh
+        run: ssh dpsu@178.154.244.43 ./pull_docker.sh
 
