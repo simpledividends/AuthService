@@ -179,6 +179,15 @@ class MailgunMailService(MailService):
                 }
             ) as resp:
                 resp_text = await resp.text()
+                print("resp_text: ", resp_text)
+                print("self.mailgun_url: ", self.mailgun_url)
+                print("data: ", {
+                    "from": from_user,
+                    "to": email,
+                    "subject": subject,
+                    "text": text,
+                    "html": html,
+                })
                 if resp.status != HTTPStatus.OK:
                     raise SendMailError(resp.status, resp_text)
                 try:
