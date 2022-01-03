@@ -1,4 +1,6 @@
+import json
 import typing as tp
+from contextlib import contextmanager
 from http import HTTPStatus
 from pathlib import Path
 from socket import AF_INET
@@ -32,7 +34,7 @@ TEMPLATES_PATH = Path(__file__).parent / "templates"
 
 class SendMailError(Exception):
 
-    def __init__(self, status: int, resp: tp.Dict[tp.Any, tp.Any]) -> None:
+    def __init__(self, status: int, resp: tp.Union[tp.Dict, str]) -> None:
         super().__init__()
         self.status = status
         self.resp = resp
@@ -148,6 +150,14 @@ class MailgunMailService(MailService):
             )
         )
 
+    @contextmanager
+    def _open_session(self) -> tp.Iterator[aiohttp.ClientSession]:
+        session = self._get_session()
+        try:
+            yield session
+        finally:
+            session.close()
+
     async def send_mail(
         self,
         from_user: str,
@@ -156,17 +166,24 @@ class MailgunMailService(MailService):
         text: str,
         html: str,
     ) -> None:
-        session = self._get_session()
-        async with session.post(
-            url=self.mailgun_url,
-            auth=BasicAuth("api", self.mailgun_api_key),
-            data={
-                "from": from_user,
-                "to": email,
-                "subject": subject,
-                "text": text,
-                "html": html,
-            }
-        ) as resp:
-            if resp.status != HTTPStatus.OK:
-                raise SendMailError(resp.status, await resp.json())
+        with self._open_session() as session:
+            async with session.post(
+                url=self.mailgun_url,
+                auth=BasicAuth("api", self.mailgun_api_key),
+                data={
+                    "from": from_user,
+                    "to": email,
+                    "subject": subject,
+                    "text": text,
+                    "html": html,
+                }
+            ) as resp:
+                resp_text = await resp.text()
+                if resp.status != HTTPStatus.OK:
+                    raise SendMailError(resp.status, resp_text)
+                try:
+                    resp_json = json.loads(resp_text)
+                except json.JSONDecodeError:
+                    raise SendMailError(resp.status, resp_text)
+                if "id" not in resp_json:
+                    raise SendMailError(resp.status, resp_json)

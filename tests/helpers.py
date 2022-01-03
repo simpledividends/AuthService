@@ -50,7 +50,7 @@ class FakeMailgunServer:
                 content_type="application/json"
             )
         return werkzeug.Response(
-            orjson.dumps({"message": "ok"}),
+            orjson.dumps({"id": "some id"}),
             status=HTTPStatus.OK,
             content_type="application/json"
         )
