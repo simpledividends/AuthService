@@ -25,12 +25,16 @@ from auth_service.settings import ServiceConfig, get_config
 
 from .constants import (
     CHANGE_EMAIL_LINK_TEMPLATE,
-    MAILGUN_API_KEY,
     MAIL_DOMAIN,
     REGISTER_VERIFY_LINK_TEMPLATE,
     RESET_PASSWORD_LINK_TEMPLATE,
+    SENDGRID_API_KEY,
 )
-from .helpers import DBObjectCreator, FakeMailgunServer, check_access_forbidden
+from .helpers import (
+    DBObjectCreator,
+    FakeSendgridServer,
+    check_access_forbidden,
+)
 
 CURRENT_DIR = Path(__file__).parent
 ALEMBIC_INI_PATH = CURRENT_DIR.parent / "alembic.ini"
@@ -87,14 +91,14 @@ def db_session(db_bind: sa.engine.Engine) -> tp.Iterator[orm.Session]:
 
 
 @pytest.fixture
-def fake_mailgun_server() -> FakeMailgunServer:
-    return FakeMailgunServer()
+def fake_sendgrid_server() -> FakeSendgridServer:
+    return FakeSendgridServer()
 
 
 @pytest.fixture
-def mailgun_server_url(
+def sendgrid_server_url(
     httpserver: HTTPServer,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> str:
     path = "/send_mail"
     send_mail_url = f"http://127.0.0.1:{httpserver.port}{path}"
@@ -102,7 +106,7 @@ def mailgun_server_url(
         httpserver
         .expect_request(path, "POST")
         .respond_with_handler(
-            func=fake_mailgun_server.handle_send_mail_request,
+            func=fake_sendgrid_server.handle_send_mail_request,
         )
     )
     return send_mail_url
@@ -122,7 +126,7 @@ def create_db_object(
 
 
 @pytest.fixture
-def set_env(mailgun_server_url: str) -> tp.Generator[None, None, None]:
+def set_env(sendgrid_server_url: str) -> tp.Generator[None, None, None]:
     monkeypatch = MonkeyPatch()
     monkeypatch.setenv("MAIL_DOMAIN", MAIL_DOMAIN)
     monkeypatch.setenv(
@@ -137,8 +141,8 @@ def set_env(mailgun_server_url: str) -> tp.Generator[None, None, None]:
         "RESET_PASSWORD_LINK_TEMPLATE",
         RESET_PASSWORD_LINK_TEMPLATE,
     )
-    monkeypatch.setenv("MAILGUN_API_KEY", MAILGUN_API_KEY)
-    monkeypatch.setenv("MAILGUN_URL", mailgun_server_url)
+    monkeypatch.setenv("SENDGRID_API_KEY", SENDGRID_API_KEY)
+    monkeypatch.setenv("SENDGRID_URL", sendgrid_server_url)
 
     yield
 

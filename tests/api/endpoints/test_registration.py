@@ -30,7 +30,7 @@ from tests.constants import (
 )
 from tests.helpers import (
     DBObjectCreator,
-    FakeMailgunServer,
+    FakeSendgridServer,
     assert_all_tables_are_empty,
     make_db_newcomer,
     make_db_registration_token,
@@ -54,7 +54,7 @@ def test_registration_success(
     db_session: orm.Session,
     security_service: SecurityService,
     service_config: ServiceConfig,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ):
     request_body = REGISTER_REQUEST_BODY.copy()
     now = utc_now()
@@ -111,28 +111,33 @@ def test_registration_success(
     )
 
     # Check sent mail
-    assert len(fake_mailgun_server.requests) == 1
-    send_mail_request = fake_mailgun_server.requests[0]
-    assert send_mail_request.authorization == {
-        "username": "api",
-        "password": service_config.mail_config.mailgun_config.mailgun_api_key,
-    }
+    assert len(fake_sendgrid_server.requests) == 1
+    send_mail_request = fake_sendgrid_server.requests[0]
+    assert send_mail_request.headers["Authorization"] == \
+        f"Bearer {service_config.mail_config.sendgrid_config.sendgrid_api_key}"
     assert (
-        send_mail_request.form["from"]
-        == REGISTRATION_EMAIL_SENDER.format(
-            domain=service_config.mail_config.mail_domain
-        )
+        send_mail_request.json["from"] == {
+            "email": REGISTRATION_EMAIL_SENDER.username
+            + f"@{service_config.mail_config.mail_domain}",
+            "name": REGISTRATION_EMAIL_SENDER.name,
+        }
     )
-    assert send_mail_request.form["to"] == newcomer.email
-    assert send_mail_request.form["subject"] == REGISTRATION_EMAIL_SUBJECT
+    assert (
+        send_mail_request.json["personalizations"]
+        == [{"to": [{"email": newcomer.email}]}]
+    )
+    assert send_mail_request.json["subject"] == REGISTRATION_EMAIL_SUBJECT
 
+    contents = send_mail_request.json["content"]
+    assert contents[0]["type"] == "text/plain"
+    assert contents[1]["type"] == "text/html"
     link_pattern = (
         REGISTER_VERIFY_LINK_TEMPLATE
         .replace("{token}", r"(\w+)")
         .replace("?", r"\?")
     )
-    text_token = re.findall(link_pattern, send_mail_request.form["text"])[0]
-    html_token = re.findall(link_pattern, send_mail_request.form["html"])[0]
+    text_token = re.findall(link_pattern, contents[0]["value"])[0]
+    html_token = re.findall(link_pattern, contents[1]["value"])[0]
     assert text_token == html_token
     assert security_service.hash_token_string(text_token) == reg_token.token
 
@@ -182,7 +187,7 @@ def test_registration_validation_errors(
     request_body_updates: tp.Dict[str, tp.Any],
     expected_error_loc: tp.List[str],
     expected_error_key: str,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
     db_session: orm.Session,
 ):
     request_body = REGISTER_REQUEST_BODY.copy()
@@ -200,14 +205,14 @@ def test_registration_validation_errors(
 
     assert_all_tables_are_empty(db_session)
 
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_registration_when_user_exists(
     client: TestClient,
     create_db_object: DBObjectCreator,
     db_session: orm.Session,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> None:
     request_body = REGISTER_REQUEST_BODY.copy()
     email = request_body["email"]
@@ -222,7 +227,7 @@ def test_registration_when_user_exists(
     assert resp.json()["errors"][0]["error_key"] == "email.already_exists"
 
     assert_all_tables_are_empty(db_session, [UserTable])
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_registration_when_newcomers_exist(
@@ -230,7 +235,7 @@ def test_registration_when_newcomers_exist(
     service_config: ServiceConfig,
     create_db_object: DBObjectCreator,
     db_session: orm.Session,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> None:
     request_body = REGISTER_REQUEST_BODY.copy()
     max_same_newcomers = (
@@ -273,7 +278,7 @@ def test_registration_when_newcomers_exist(
        == 1 + max_same_newcomers
     )
 
-    assert len(fake_mailgun_server.requests) == max_same_newcomers
+    assert len(fake_sendgrid_server.requests) == max_same_newcomers
 
 
 def test_registration_when_requests_for_email_change_exist(
@@ -281,7 +286,7 @@ def test_registration_when_requests_for_email_change_exist(
     service_config: ServiceConfig,
     create_db_object: DBObjectCreator,
     db_session: orm.Session,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> None:
     request_body = REGISTER_REQUEST_BODY.copy()
     max_email_change_requests = (
@@ -314,7 +319,7 @@ def test_registration_when_requests_for_email_change_exist(
        len(db_session.query(EmailTokenTable).all())
        == max_email_change_requests
     )
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_register_verify_success(

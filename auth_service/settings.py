@@ -1,4 +1,11 @@
+from enum import Enum
+
 from pydantic import BaseSettings, HttpUrl, PostgresDsn
+
+
+class Environment(str, Enum):
+    TEST = "TEST"
+    PRODUCTION = "PRODUCTION"
 
 
 class Config(BaseSettings):
@@ -55,9 +62,9 @@ class DBConfig(Config):
     db_pool_config: DBPoolConfig
 
 
-class MailgunConfig(Config):
-    mailgun_url: HttpUrl
-    mailgun_api_key: str
+class SendgridConfig(Config):
+    sendgrid_url: HttpUrl
+    sendgrid_api_key: str
     aiohttp_pool_size: int = 100
     aiohttp_session_timeout: float = 5
 
@@ -68,12 +75,13 @@ class MailConfig(Config):
     change_email_link_template: str
     reset_password_link_template: str
 
-    mailgun_config: MailgunConfig
+    sendgrid_config: SendgridConfig
 
 
 class ServiceConfig(Config):
     service_name: str = "auth_service"
     request_id_header: str = "X-Request-Id"
+    environment: str = Environment.TEST
 
     log_config: LogConfig
     security_config: SecurityConfig
@@ -86,5 +94,5 @@ def get_config() -> ServiceConfig:
         log_config=LogConfig(),
         security_config=SecurityConfig(),
         db_config=DBConfig(db_pool_config=DBPoolConfig()),
-        mail_config=MailConfig(mailgun_config=MailgunConfig()),
+        mail_config=MailConfig(sendgrid_config=SendgridConfig()),
     )

@@ -29,7 +29,7 @@ from .utils import random_email
 DBObjectCreator = tp.Callable[[Base], None]
 
 
-class FakeMailgunServer:
+class FakeSendgridServer:
 
     def __init__(self) -> None:
         self.requests: tp.List[werkzeug.Request] = []
@@ -50,8 +50,8 @@ class FakeMailgunServer:
                 content_type="application/json"
             )
         return werkzeug.Response(
-            orjson.dumps({"id": "some id"}),
-            status=HTTPStatus.OK,
+            "",
+            status=HTTPStatus.ACCEPTED,
             content_type="application/json"
         )
 
