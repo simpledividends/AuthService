@@ -88,23 +88,28 @@ def test_patch_me_success(
         create_db_object,
     )
 
-    new_name = "my_new_name"
+    new_info = {
+        "name": "my_new_name",
+        "marketing_agree": False,
+    }
     with client:
         resp = client.patch(
             ME_PATH,
             headers={"Authorization": f"Bearer {access_token}"},
-            json={"name": new_name},
+            json=new_info,
         )
 
     assert resp.status_code == HTTPStatus.OK
     resp_json = resp.json()
     assert set(resp_json.keys()) == set(User.schema()['properties'].keys())
     assert resp_json["user_id"] == user.user_id
-    assert resp_json["name"] == new_name
+    assert resp_json["name"] == new_info["name"]
+    assert resp_json["marketing_agree"] == new_info["marketing_agree"]
 
     users = db_session.query(UserTable).all()
     assert len(users) == 1
-    assert users[0].name == new_name
+    assert users[0].name == new_info["name"]
+    assert users[0].marketing_agree == new_info["marketing_agree"]
 
 
 @pytest.mark.parametrize(

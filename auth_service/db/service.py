@@ -159,7 +159,7 @@ class DBService(BaseModel):
     ) -> Newcomer:
         query = """
             INSERT INTO newcomers
-                (user_id, name, email, password, created_at)
+                (user_id, name, email, password, created_at, marketing_agree)
             VALUES
                 (
                     $1::UUID
@@ -167,8 +167,9 @@ class DBService(BaseModel):
                     , $3::VARCHAR
                     , $4::VARCHAR
                     , $5::TIMESTAMP
+                    , $6::BOOLEAN
                 )
-            RETURNING user_id, name, email, created_at
+            RETURNING user_id, name, email, created_at, marketing_agree
         """
         record = await conn.fetchrow(
             query,
@@ -177,6 +178,7 @@ class DBService(BaseModel):
             newcomer.email,
             newcomer.hashed_password,
             newcomer.created_at,
+            newcomer.marketing_agree,
         )
         return Newcomer(**record)
 
@@ -217,7 +219,16 @@ class DBService(BaseModel):
 
         query = """
             INSERT INTO users
-                (user_id, name, email, password, created_at, verified_at, role)
+                (
+                    user_id
+                    , name
+                    , email
+                    , password
+                    , created_at
+                    , verified_at
+                    , role
+                    , marketing_agree
+                )
             VALUES
                 (
                     $1::UUID
@@ -227,8 +238,16 @@ class DBService(BaseModel):
                     , $5::TIMESTAMP
                     , $6::TIMESTAMP
                     , $7::role_enum
+                    , $8::BOOLEAN
                 )
-            RETURNING user_id, name, email, created_at, verified_at, role
+            RETURNING
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+                , marketing_agree
         """
         record = await conn.fetchrow(
             query,
@@ -239,6 +258,7 @@ class DBService(BaseModel):
             newcomer["created_at"],
             utc_now(),
             UserRole.user,
+            newcomer["marketing_agree"],
         )
         return User(**record)
 
@@ -332,6 +352,7 @@ class DBService(BaseModel):
                 , u.created_at
                 , u.verified_at
                 , u.role
+                , u.marketing_agree
             FROM users u
                 JOIN sessions s on u.user_id = s.user_id
                 JOIN access_tokens t on s.session_id = t.session_id
@@ -344,7 +365,14 @@ class DBService(BaseModel):
 
     async def get_user(self, user_id: UUID) -> User:
         query = """
-            SELECT user_id, name, email, created_at, verified_at, role
+            SELECT
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+                , marketing_agree
             FROM users
             WHERE user_id = $1::UUID
         """
@@ -415,11 +443,23 @@ class DBService(BaseModel):
     async def update_user(self, user_id: UUID, user_info: UserInfo) -> User:
         query = """
             UPDATE users
-            SET name = $1::VARCHAR
-            WHERE user_id = $2::UUID
-            RETURNING user_id, name, email, created_at, verified_at, role
+            SET name = $1::VARCHAR, marketing_agree = $2::BOOLEAN
+            WHERE user_id = $3::UUID
+            RETURNING
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+                , marketing_agree
         """
-        record = await self.pool.fetchrow(query, user_info.name, user_id)
+        record = await self.pool.fetchrow(
+            query,
+            user_info.name,
+            user_info.marketing_agree,
+            user_id,
+        )
         return User(**record)
 
     async def update_password_if_old_is_valid(
@@ -520,7 +560,14 @@ class DBService(BaseModel):
             UPDATE users
             SET email = $1::VARCHAR
             WHERE user_id = $2::UUID
-            RETURNING user_id , name , email , created_at , verified_at , role
+            RETURNING
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+                , marketing_agree
         """
         record = await conn.fetchrow(query, record["email"], record["user_id"])
         return User(**record)
@@ -535,7 +582,14 @@ class DBService(BaseModel):
 
     async def get_user_by_email(self, email: str) -> User:
         query = """
-            SELECT user_id, name, email, created_at, verified_at, role
+            SELECT
+                user_id
+                , name
+                , email
+                , created_at
+                , verified_at
+                , role
+                , marketing_agree
             FROM users
             WHERE email = $1::VARCHAR
         """

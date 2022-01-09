@@ -78,6 +78,7 @@ def make_db_user(
     created_at: datetime = datetime(2021, 6, 12),
     verified_at: datetime = datetime(2021, 6, 13),
     role: UserRole = UserRole.user,
+    marketing_agree: bool = True,
 ) -> UserTable:
     return UserTable(
         user_id=str(user_id or uuid4()),
@@ -87,6 +88,7 @@ def make_db_user(
         created_at=created_at,
         verified_at=verified_at,
         role=role,
+        marketing_agree=marketing_agree,
     )
 
 
@@ -96,6 +98,7 @@ def make_db_newcomer(
     email: str = "simple@dividends.ru",
     password: str = "hashed_pass",
     created_at: datetime = datetime(2021, 6, 12),
+    marketing_agree: bool = True,
 ) -> NewcomerTable:
     return NewcomerTable(
         user_id=str(user_id or uuid4()),
@@ -103,6 +106,7 @@ def make_db_newcomer(
         email=email,
         password=password,
         created_at=created_at,
+        marketing_agree=marketing_agree,
     )
 
 

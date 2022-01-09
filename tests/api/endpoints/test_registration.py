@@ -46,17 +46,21 @@ REGISTER_REQUEST_BODY = {
     "name": USER_NAME,
     "email": USER_EMAIL,
     "password": USER_PASSWORD,
+    "marketing_agree": True,
 }
 
 
+@pytest.mark.parametrize("marketing_agree", (True, False))
 def test_registration_success(
     client: TestClient,
     db_session: orm.Session,
     security_service: SecurityService,
     service_config: ServiceConfig,
     fake_sendgrid_server: FakeSendgridServer,
+    marketing_agree: bool,
 ):
     request_body = REGISTER_REQUEST_BODY.copy()
+    request_body.update({"marketing_agree": marketing_agree})
     now = utc_now()
     with client:
         resp = client.post(
@@ -67,7 +71,13 @@ def test_registration_success(
     # Check response
     assert resp.status_code == HTTPStatus.CREATED
     resp_json = resp.json()
-    assert set(resp_json.keys()) == {"user_id", "name", "email", "created_at"}
+    assert set(resp_json.keys()) == {
+        "user_id",
+        "name",
+        "email",
+        "created_at",
+        "marketing_agree",
+    }
     assert UUID(resp_json["user_id"]).version == 4
     assert resp_json["name"] == request_body["name"]
     assert resp_json["email"] == request_body["email"]
@@ -75,6 +85,7 @@ def test_registration_success(
         datetime.fromisoformat(resp_json["created_at"])
         == ApproxDatetime(now)
     )
+    assert resp_json["marketing_agree"] == marketing_agree
 
     # Check DB content
     assert_all_tables_are_empty(
@@ -95,7 +106,7 @@ def test_registration_success(
     for field, value in resp_json.items():
         assert newcomer_dict[field] == value
     assert security_service.is_password_correct(
-        request_body["password"],
+        request_body["password"],  # type: ignore
         newcomer.password
     )
 
@@ -216,7 +227,7 @@ def test_registration_when_user_exists(
 ) -> None:
     request_body = REGISTER_REQUEST_BODY.copy()
     email = request_body["email"]
-    user = make_db_user(email=email)
+    user = make_db_user(email=email)  # type: ignore
     create_db_object(user)
     with client:
         resp = client.post(
@@ -301,7 +312,7 @@ def test_registration_when_requests_for_email_change_exist(
         token = make_email_token(
             token=f"hashed_token_{i}",
             user_id=user.user_id,
-            email=request_body["email"],
+            email=request_body["email"],  # type: ignore
         )
         create_db_object(token)
 

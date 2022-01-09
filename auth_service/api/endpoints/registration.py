@@ -58,6 +58,7 @@ async def register(
     newcomer_full = NewcomerFull(
         name=newcomer.name,
         email=newcomer.email,
+        marketing_agree=newcomer.marketing_agree,
         hashed_password=security_service.hash_password(newcomer.password),
         user_id=uuid4(),
         created_at=utc_now(),
