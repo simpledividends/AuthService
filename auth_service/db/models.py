@@ -24,7 +24,7 @@ class UserTable(Base):
     created_at = Column(pg.TIMESTAMP, nullable=False)
     verified_at = Column(pg.TIMESTAMP, nullable=False)
     role = Column(role_enum, default="user", nullable=False)
-    marketing_agree = Column(pg.BOOLEAN, nullable=False)
+    marketing_agree = Column(pg.BOOLEAN, nullable=False, default=False)
 
 
 class NewcomerTable(Base):
@@ -35,7 +35,7 @@ class NewcomerTable(Base):
     email = Column(pg.VARCHAR(128), unique=True, index=True, nullable=False)
     password = Column(pg.VARCHAR(128), nullable=False)
     created_at = Column(pg.TIMESTAMP, nullable=False)
-    marketing_agree = Column(pg.BOOLEAN, nullable=False)
+    marketing_agree = Column(pg.BOOLEAN, nullable=False, default=False)
 
 
 class RegistrationTokenTable(Base):

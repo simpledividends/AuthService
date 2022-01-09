@@ -19,11 +19,11 @@ depends_on = None
 def upgrade():
     op.add_column(
         "newcomers",
-        sa.Column("marketing_agree", BOOLEAN, nullable=False),
+        sa.Column("marketing_agree", BOOLEAN, nullable=False, default=False),
     )
     op.add_column(
         "users",
-        sa.Column("marketing_agree", BOOLEAN, nullable=False),
+        sa.Column("marketing_agree", BOOLEAN, nullable=False, default=False),
     )
 
 
