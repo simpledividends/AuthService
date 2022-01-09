@@ -67,7 +67,8 @@ async def test_registration_when_newcomers_exist_with_parallel_requests(
             email=email,
             hashed_password="pass",
             user_id=uuid4(),
-            created_at=utc_now()
+            created_at=utc_now(),
+            marketing_agree=True,
         )
         for _ in range(max_same_newcomers * 3)
     ]

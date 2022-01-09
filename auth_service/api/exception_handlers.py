@@ -59,6 +59,7 @@ async def validation_error_handler(
         )
         for err in exc.errors()
     ]
+
     app_logger.info(f"Validation errors: {exc_to_str(exc)}")
     return create_response(status.HTTP_422_UNPROCESSABLE_ENTITY, errors=errors)
 
