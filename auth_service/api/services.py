@@ -4,7 +4,7 @@ from asyncpg.pool import create_pool
 from fastapi import FastAPI
 
 from auth_service.db.service import DBService
-from auth_service.mail.service import MailService, MailgunMailService
+from auth_service.mail.service import MailService, SendgridMailService
 from auth_service.security import SecurityService
 from auth_service.settings import ServiceConfig
 
@@ -46,8 +46,8 @@ def make_security_service(config: ServiceConfig) -> SecurityService:
     return service
 
 
-def make_mail_service(config: ServiceConfig) -> MailgunMailService:
+def make_mail_service(config: ServiceConfig) -> SendgridMailService:
     mail_config = config.mail_config.dict()
-    mailgun_config = mail_config.pop("mailgun_config")
-    service = MailgunMailService(**{**mail_config, **mailgun_config})
+    sendgrid_config = mail_config.pop("sendgrid_config")
+    service = SendgridMailService(**{**mail_config, **sendgrid_config})
     return service

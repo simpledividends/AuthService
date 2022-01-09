@@ -30,7 +30,7 @@ from tests.constants import (
 )
 from tests.helpers import (
     DBObjectCreator,
-    FakeMailgunServer,
+    FakeSendgridServer,
     assert_all_tables_are_empty,
     create_authorized_user,
     make_db_newcomer,
@@ -233,7 +233,7 @@ def test_patch_email_success(
     security_service: SecurityService,
     db_session: orm.Session,
     service_config: ServiceConfig,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ):
     password = "Str0ngPa$$"
     hashed_password = security_service.hash_password(password)
@@ -282,28 +282,33 @@ def test_patch_email_success(
     )
 
     # Check sent mail
-    assert len(fake_mailgun_server.requests) == 1
-    send_mail_request = fake_mailgun_server.requests[0]
-    assert send_mail_request.authorization == {
-        "username": "api",
-        "password": service_config.mail_config.mailgun_config.mailgun_api_key,
-    }
+    assert len(fake_sendgrid_server.requests) == 1
+    send_mail_request = fake_sendgrid_server.requests[0]
+    assert send_mail_request.headers["Authorization"] == \
+        f"Bearer {service_config.mail_config.sendgrid_config.sendgrid_api_key}"
     assert (
-        send_mail_request.form["from"]
-        == CHANGE_EMAIL_SENDER.format(
-            domain=service_config.mail_config.mail_domain
-        )
+        send_mail_request.json["from"] == {
+            "email": CHANGE_EMAIL_SENDER.username
+            + f"@{service_config.mail_config.mail_domain}",
+            "name": CHANGE_EMAIL_SENDER.name,
+        }
     )
-    assert send_mail_request.form["to"] == new_email
-    assert send_mail_request.form["subject"] == CHANGE_EMAIL_SUBJECT
+    assert (
+        send_mail_request.json["personalizations"]
+        == [{"to": [{"email": new_email}]}]
+    )
+    assert send_mail_request.json["subject"] == CHANGE_EMAIL_SUBJECT
 
+    contents = send_mail_request.json["content"]
+    assert contents[0]["type"] == "text/plain"
+    assert contents[1]["type"] == "text/html"
     link_pattern = (
         CHANGE_EMAIL_LINK_TEMPLATE
         .replace("{token}", r"(\w+)")
         .replace("?", r"\?")
     )
-    text_token = re.findall(link_pattern, send_mail_request.form["text"])[0]
-    html_token = re.findall(link_pattern, send_mail_request.form["html"])[0]
+    text_token = re.findall(link_pattern, contents[0]["value"])[0]
+    html_token = re.findall(link_pattern, contents[1]["value"])[0]
     assert text_token == html_token
     assert security_service.hash_token_string(text_token) == email_token.token
 
@@ -366,7 +371,7 @@ def test_patch_my_email_when_user_exists(
     create_db_object: DBObjectCreator,
     security_service: SecurityService,
     db_session: orm.Session,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> None:
     new_email = "new@e.mail"
     create_db_object(make_db_user(email=new_email))
@@ -388,7 +393,7 @@ def test_patch_my_email_when_user_exists(
     assert resp.json()["errors"][0]["error_key"] == "email.already_exists"
 
     assert len(db_session.query(EmailTokenTable).all()) == 0
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_patch_my_email_when_newcomers_exist(
@@ -397,7 +402,7 @@ def test_patch_my_email_when_newcomers_exist(
     create_db_object: DBObjectCreator,
     db_session: orm.Session,
     security_service: SecurityService,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> None:
     max_same_newcomers = (
         service_config
@@ -433,7 +438,7 @@ def test_patch_my_email_when_newcomers_exist(
     assert resp.json()["errors"][0]["error_key"] == "conflict"
 
     assert len(db_session.query(EmailTokenTable).all()) == 0
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_patch_my_email_when_requests_for_email_change_exist(
@@ -443,7 +448,7 @@ def test_patch_my_email_when_requests_for_email_change_exist(
     db_session: orm.Session,
     security_service: SecurityService,
 
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ) -> None:
     max_email_requests = (
         service_config
@@ -480,7 +485,7 @@ def test_patch_my_email_when_requests_for_email_change_exist(
     assert resp.json()["errors"][0]["error_key"] == "conflict"
 
     assert len(db_session.query(EmailTokenTable).all()) == max_email_requests
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_change_email_verify_success(
@@ -573,7 +578,7 @@ def test_forgot_password_success(
     security_service: SecurityService,
     db_session: orm.Session,
     service_config: ServiceConfig,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ):
     user = make_db_user()
     create_db_object(user)
@@ -608,28 +613,33 @@ def test_forgot_password_success(
     )
 
     # Check sent mail
-    assert len(fake_mailgun_server.requests) == 1
-    send_mail_request = fake_mailgun_server.requests[0]
-    assert send_mail_request.authorization == {
-        "username": "api",
-        "password": service_config.mail_config.mailgun_config.mailgun_api_key,
-    }
+    assert len(fake_sendgrid_server.requests) == 1
+    send_mail_request = fake_sendgrid_server.requests[0]
+    assert send_mail_request.headers["Authorization"] == \
+        f"Bearer {service_config.mail_config.sendgrid_config.sendgrid_api_key}"
     assert (
-        send_mail_request.form["from"]
-        == RESET_PASSWORD_SENDER.format(
-            domain=service_config.mail_config.mail_domain
-        )
+        send_mail_request.json["from"] == {
+            "email": RESET_PASSWORD_SENDER.username
+            + f"@{service_config.mail_config.mail_domain}",
+            "name": RESET_PASSWORD_SENDER.name,
+        }
     )
-    assert send_mail_request.form["to"] == user.email
-    assert send_mail_request.form["subject"] == RESET_PASSWORD_SUBJECT
+    assert (
+        send_mail_request.json["personalizations"]
+        == [{"to": [{"email": user.email}]}]
+    )
+    assert send_mail_request.json["subject"] == RESET_PASSWORD_SUBJECT
 
+    contents = send_mail_request.json["content"]
+    assert contents[0]["type"] == "text/plain"
+    assert contents[1]["type"] == "text/html"
     link_pattern = (
         RESET_PASSWORD_LINK_TEMPLATE
         .replace("{token}", r"(\w+)")
         .replace("?", r"\?")
     )
-    text_token = re.findall(link_pattern, send_mail_request.form["text"])[0]
-    html_token = re.findall(link_pattern, send_mail_request.form["html"])[0]
+    text_token = re.findall(link_pattern, contents[0]["value"])[0]
+    html_token = re.findall(link_pattern, contents[1]["value"])[0]
     assert text_token == html_token
     assert (
         security_service.hash_token_string(text_token)
@@ -656,7 +666,7 @@ def test_forgot_password_with_invalid_email(
 def test_forgot_password_when_email_not_exists(
     client: TestClient,
     db_session: orm.Session,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ):
     with client:
         resp = client.post(
@@ -668,7 +678,7 @@ def test_forgot_password_when_email_not_exists(
     assert resp.json() == {}
 
     assert_all_tables_are_empty(db_session)
-    assert len(fake_mailgun_server.requests) == 0
+    assert len(fake_sendgrid_server.requests) == 0
 
 
 def test_forgot_password_when_too_many_requests(
@@ -677,7 +687,7 @@ def test_forgot_password_when_too_many_requests(
     create_db_object: DBObjectCreator,
     security_service: SecurityService,
     db_session: orm.Session,
-    fake_mailgun_server: FakeMailgunServer,
+    fake_sendgrid_server: FakeSendgridServer,
 ):
     max_password_tokens = (
         service_config
@@ -704,7 +714,7 @@ def test_forgot_password_when_too_many_requests(
         assert resp.status_code == HTTPStatus.ACCEPTED
 
         n_tokens = len(db_session.query(PasswordTokenTable).all())
-        n_mails = len(fake_mailgun_server.requests)
+        n_mails = len(fake_sendgrid_server.requests)
         if i < max_password_tokens:
             assert n_tokens == i + 2
             assert n_mails == i + 1
