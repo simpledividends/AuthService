@@ -205,4 +205,4 @@ jobs:
         run: ssh $SSH_USER_HOST ./pull_image.sh $IMAGE $SHORT_SHA
 
       - name: Update service
-        run: ssh $SSH_USER_HOST ./update_service.sh $SERVICE $IMAGE $SHORT_SHA
+        run: ssh $SSH_USER_HOST ./create_or_update_service.sh $SERVICE $IMAGE $SHORT_SHA
