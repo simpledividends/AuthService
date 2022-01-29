@@ -89,8 +89,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: |
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ env.SHORT_SHA }}
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/${{ env.IMAGE }}:${{ env.SHORT_SHA }}
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/${{ env.IMAGE }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
@@ -170,8 +170,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: |
-            cr.yandex/${{ secrets.PROD_CR_ID }}/auth_service:${{ env.SHORT_SHA }}
-            cr.yandex/${{ secrets.PROD_CR_ID }}/auth_service:latest
+            cr.yandex/${{ secrets.PROD_CR_ID }}/${{ env.IMAGE }}:${{ env.SHORT_SHA }}
+            cr.yandex/${{ secrets.PROD_CR_ID }}/${{ env.IMAGE }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
