@@ -89,8 +89,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: |
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:${{ env.SHORT_SHA }}
-            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/auth_service:latest
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/${{ env.IMAGE }}:${{ env.SHORT_SHA }}
+            cr.yandex/${{ secrets.YC_TEST_CR_ID }}/${{ env.IMAGE }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
@@ -125,3 +125,84 @@ jobs:
 
       - name: Update service
         run: ssh $SSH_USER_HOST ./update_service.sh $SERVICE $IMAGE $SHORT_SHA
+
+
+# -------------- PROD ENV --------------------- #
+
+  prod_build:
+    needs: run_tests
+    runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+
+      - name: Get SHORT_SHA
+        run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+
+      - name: Check Out Repo
+        uses: actions/checkout@v2
+
+      - name: Login to Yandex Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: cr.yandex
+          username: json_key
+          password: ${{ secrets.PROD_CR_PUSHER_KEY }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: |
+            cr.yandex/${{ secrets.PROD_CR_ID }}/${{ env.IMAGE }}:${{ env.SHORT_SHA }}
+            cr.yandex/${{ secrets.PROD_CR_ID }}/${{ env.IMAGE }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
+
+
+  prod_deploy:
+    needs: prod_build
+    runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/master'
+    env:
+          SSH_USER_HOST: ${{ secrets.PROD_VM_USER_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.PROD_VM_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PROD_VM_SSH_KNOWN_HOSTS }}
+
+    steps:
+
+      - name: Get SHORT_SHA
+        run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          sudo chmod 600 ~/.ssh/id_rsa
+          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Pull image
+        run: ssh $SSH_USER_HOST ./pull_image.sh $IMAGE $SHORT_SHA
+
+      - name: Update service
+        run: ssh $SSH_USER_HOST ./create_or_update_service.sh $SERVICE $IMAGE $SHORT_SHA
