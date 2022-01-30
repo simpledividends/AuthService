@@ -39,7 +39,7 @@ from .exceptions import (
 T = tp.TypeVar("T")
 
 
-class DBService(BaseModel):
+class DBService(BaseModel):  # pylint: disable=too-many-public-methods
     pool: Pool
     max_active_newcomers_with_same_email: int
     max_active_requests_change_same_email: int
@@ -294,6 +294,17 @@ class DBService(BaseModel):
         if record is None:
             raise UserNotExists()
         return record["user_id"], record["password"]
+
+    async def get_newcomer_password(self, email: str) -> str:
+        query = """
+            SELECT password
+            FROM newcomers
+            WHERE email = $1::VARCHAR
+        """
+        record = await self.pool.fetchrow(query, email)
+        if record is None:
+            raise UserNotExists()
+        return record["password"]
 
     async def create_session(self, user_id: UUID) -> UUID:
         query = """

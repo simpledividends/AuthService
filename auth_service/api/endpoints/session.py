@@ -43,7 +43,7 @@ async def _create_token_pair(
     status_code=HTTPStatus.OK,
     response_model=TokenPair,
     responses={
-        403: responses.credentials_invalid,
+        403: responses.credentials_invalid_or_email_not_confirmed,
         422: responses.unprocessable_entity,
     }
 )
@@ -53,15 +53,33 @@ async def login(
 ) -> TokenPair:
     app_logger.info(f"Login with email {credentials.email}")
     db_service = get_db_service(request.app)
+    security_service = get_security_service(request.app)
+
     try:
         user_id, hashed_password = await db_service.get_user_with_password(
             credentials.email
         )
     except UserNotExists:
         app_logger.info(f"User with email {credentials.email} not exists")
+
+        try:
+            hashed_nc_password = await db_service.get_newcomer_password(
+                credentials.email
+            )
+        except UserNotExists:
+            app_logger.info(f"Newcomer {credentials.email} not exists")
+            raise ForbiddenException(error_key="credentials.invalid")
+
+        if security_service.is_password_correct(
+            credentials.password,
+            hashed_nc_password,
+        ):
+            app_logger.info("Newcomer exists, email not confirmed")
+            raise ForbiddenException(error_key="email.not_confirmed")
+
+        app_logger.info("Newcomer exists, password invalid")
         raise ForbiddenException(error_key="credentials.invalid")
 
-    security_service = get_security_service(request.app)
     if not security_service.is_password_correct(
         credentials.password,
         hashed_password,

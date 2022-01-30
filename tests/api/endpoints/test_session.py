@@ -9,6 +9,7 @@ from starlette.testclient import TestClient
 
 from auth_service.db.models import (
     AccessTokenTable,
+    NewcomerTable,
     RefreshTokenTable,
     SessionTable,
     UserTable,
@@ -20,6 +21,7 @@ from tests.helpers import (
     DBObjectCreator,
     assert_all_tables_are_empty,
     create_authorized_user,
+    make_db_newcomer,
     make_db_user,
     make_refresh_token,
 )
@@ -114,6 +116,38 @@ def test_login_forbidden(
     assert resp.status_code == HTTPStatus.FORBIDDEN
     assert resp.json()["errors"][0]["error_key"] == "credentials.invalid"
     assert_all_tables_are_empty(db_session, [UserTable])
+
+
+@pytest.mark.parametrize(
+    "email,password,error_key",
+    (
+        ("other@e.mail", "my_password", "credentials.invalid"),
+        ("my@e.mail", "other_password", "credentials.invalid"),
+        ("my@e.mail", "my_password", "email.not_confirmed"),
+    )
+)
+def test_login_when_email_not_confirmed(
+    client: TestClient,
+    db_session: orm.Session,
+    create_db_object: DBObjectCreator,
+    security_service: SecurityService,
+    email: str,
+    password: str,
+    error_key: str,
+) -> None:
+    hashed_password = security_service.hash_password("my_password")
+    newcomer = make_db_newcomer(email="my@e.mail", password=hashed_password)
+    create_db_object(newcomer)
+
+    with client:
+        resp = client.post(
+            LOGIN_PATH,
+            json={"email": email, "password": password},
+        )
+
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+    assert resp.json()["errors"][0]["error_key"] == error_key
+    assert_all_tables_are_empty(db_session, [NewcomerTable])
 
 
 def test_logout_success(

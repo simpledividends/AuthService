@@ -129,7 +129,7 @@ forbidden_or_password_invalid = {
 }
 
 
-credentials_invalid = {
+credentials_invalid_or_email_not_confirmed = {
     "model": ErrorResponse,
     "description": "Error: Forbidden",
     "content": {
@@ -138,6 +138,11 @@ credentials_invalid = {
                 errors=[
                     Error(
                         error_key="credentials.invalid",
+                        error_message="Forbidden",
+                        error_loc=None,
+                    ),
+                    Error(
+                        error_key="email.not_confirmed",
                         error_message="Forbidden",
                         error_loc=None,
                     ),
