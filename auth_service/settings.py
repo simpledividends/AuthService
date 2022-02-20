@@ -32,8 +32,8 @@ class SecurityConfig(Config):
     password_hash_rounds: int = 100_000
     password_salt_size: int = 32
     registration_token_lifetime_seconds: float = 3600 * 24 * 7
-    change_email_token_lifetime_seconds: float = 3600 * 6
-    password_token_lifetime_seconds: float = 3600 * 1
+    change_email_token_lifetime_seconds: float = 3600 * 24
+    password_token_lifetime_seconds: float = 3600 * 24
     access_token_lifetime_seconds: float = 60 * 10
     refresh_token_lifetime_seconds: float = 3600 * 24 * 1
 
